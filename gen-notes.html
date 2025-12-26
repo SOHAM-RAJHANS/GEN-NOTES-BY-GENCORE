@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gen Notes - BYOK Gate (Canvas Safe)</title>
+  <style>
+    :root{
+      --g-blue:#4285F4;
+      --g-red:#EA4335;
+      --g-yellow:#FBBC05;
+      --g-green:#34A853;
+      --bg:#0b1220;
+      --panel:#0f172a;
+      --panel2:#111c33;
+      --text:#e5e7eb;
+      --muted:#94a3b8;
+      --border:#24304a;
+    }
+
+    html,body{height:100%;}
+    body{
+      margin:0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
+      background: radial-gradient(900px 600px at 20% 10%, rgba(66,133,244,.25), transparent 60%),
+                  radial-gradient(800px 520px at 80% 20%, rgba(234,67,53,.18), transparent 55%),
+                  radial-gradient(900px 600px at 60% 90%, rgba(52,168,83,.14), transparent 60%),
+                  var(--bg);
+      color: var(--text);
+      overflow:hidden;
+    }
+
+    /* Google glow */
+    @keyframes google-glow {
+      0% { border-color: var(--g-blue); box-shadow: 0 0 10px rgba(66,133,244,.35); }
+      25% { border-color: var(--g-red); box-shadow: 0 0 10px rgba(234,67,53,.35); }
+      50% { border-color: var(--g-yellow); box-shadow: 0 0 10px rgba(251,188,5,.35); }
+      75% { border-color: var(--g-green); box-shadow: 0 0 10px rgba(52,168,83,.35); }
+      100% { border-color: var(--g-blue); box-shadow: 0 0 10px rgba(66,133,244,.35); }
+    }
+    .google-spotlight{ animation: google-glow 4s linear infinite; border:2px solid var(--border); }
+
+    .app{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:16px 18px;
+      background: rgba(15,23,42,.85);
+      border-bottom:1px solid rgba(255,255,255,.06);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      font-weight:900;
+      font-size:22px;
+      letter-spacing:-.02em;
+    }
+    .brand b{ color: var(--g-blue); }
+
+    .badge{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(17,28,51,.8);
+      color: var(--muted);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.14em;
+      user-select:none;
+    }
+    .dot{ width:8px;height:8px;border-radius:999px;background: var(--g-yellow); box-shadow: 0 0 12px rgba(251,188,5,.35); }
+    .dot.ok{ background: var(--g-green); box-shadow: 0 0 12px rgba(52,168,83,.35); }
+
+    .btn{
+      appearance:none;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(17,28,51,.75);
+      color: var(--text);
+      padding:10px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      font-weight:800;
+      transition: transform .12s ease, background .12s ease, border-color .12s ease;
+    }
+    .btn:hover{ background: rgba(25,39,71,.8); }
+    .btn:active{ transform: scale(.98); }
+
+    .btn.primary{ background: rgba(66,133,244,.95); border-color: rgba(66,133,244,.65); }
+    .btn.primary:hover{ background: rgba(66,133,244,1); }
+
+    .btn.green{ background: rgba(52,168,83,.95); border-color: rgba(52,168,83,.65); }
+    .btn.green:hover{ background: rgba(52,168,83,1); }
+
+    main{
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:28px;
+    }
+
+    .card{
+      width:min(880px, 100%);
+      background: rgba(15,23,42,.86);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:18px;
+      box-shadow: 0 20px 70px rgba(0,0,0,.45);
+      overflow:hidden;
+    }
+
+    .cardHead{
+      padding:18px 18px 0 18px;
+    }
+
+    .title{
+      font-size:22px;
+      font-weight:900;
+      margin:0 0 6px 0;
+    }
+    .sub{ margin:0 0 14px 0; color: var(--muted); font-size:13px; line-height:1.5; }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap:14px;
+      padding:18px;
+    }
+    @media (min-width: 900px){
+      .grid{ grid-template-columns: 1fr 1fr; }
+    }
+
+    .tile{
+      background: rgba(17,28,51,.65);
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:16px;
+      padding:16px;
+      min-height: 230px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .tile h3{ margin:0; font-size:16px; font-weight:900; }
+    .tile p{ margin:0; color: var(--muted); font-size:12.5px; line-height:1.5; }
+
+    .field{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      padding:10px 12px;
+      border-radius:14px;
+      border:2px solid rgba(255,255,255,.10);
+      background: rgba(11,18,32,.55);
+    }
+    .field:focus-within{ border-color: rgba(66,133,244,.8); box-shadow: 0 0 0 4px rgba(66,133,244,.15); }
+
+    input{
+      width:100%;
+      background: transparent;
+      border:none;
+      outline:none;
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12.5px;
+    }
+
+    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+
+    .linkBox{
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size:12px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(11,18,32,.55);
+      word-break: break-all;
+      color: #cbd5e1;
+    }
+
+    .footerNote{
+      padding:0 18px 18px 18px;
+      color: rgba(148,163,184,.85);
+      font-size:11px;
+    }
+
+    /* Modal */
+    .modalWrap{
+      position:fixed;
+      inset:0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(10px);
+      z-index: 9999;
+      padding: 20px;
+    }
+    .modalWrap.show{ display:flex; }
+
+    /* Toasts */
+    .toasts{
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 10000;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      pointer-events:none;
+    }
+    .toast{
+      pointer-events:auto;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(17,28,51,.92);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow: 0 14px 40px rgba(0,0,0,.35);
+      color: var(--text);
+      font-size:12.5px;
+      animation: pop .18s ease-out;
+    }
+    @keyframes pop{ from{ transform: translateY(6px); opacity:.0 } to{ transform: translateY(0); opacity:1 } }
+
+    .toast .pill{
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.12em;
+      padding:4px 7px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      color:#cbd5e1;
+    }
+    .pill.info{ border-color: rgba(66,133,244,.35); color: rgba(66,133,244,.95); }
+    .pill.success{ border-color: rgba(52,168,83,.35); color: rgba(52,168,83,.95); }
+    .pill.warning{ border-color: rgba(251,188,5,.35); color: rgba(251,188,5,.95); }
+    .pill.error{ border-color: rgba(234,67,53,.35); color: rgba(234,67,53,.95); }
+
+    .toast button{
+      margin-left:auto;
+      background: transparent;
+      border: none;
+      color: rgba(226,232,240,.75);
+      cursor:pointer;
+      font-weight:900;
+      padding:4px 6px;
+      border-radius:10px;
+    }
+    .toast button:hover{ background: rgba(255,255,255,.06); color: #fff; }
+
+    /* Debug */
+    .debug{
+      margin-top: 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 11px;
+      color: rgba(148,163,184,.95);
+      opacity: .9;
+      background: rgba(11,18,32,.55);
+      border:1px solid rgba(255,255,255,.08);
+      padding:10px 12px;
+      border-radius: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">Gen<b>Notes</b> <span style="font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:rgba(148,163,184,.9)">Gemini Core</span></div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div id="accessBadge" class="badge" title="Access Mode">
+          <span id="accessDot" class="dot"></span>
+          <span id="accessText">ACCESS</span>
+        </div>
+        <button class="btn" id="openAccess">Access</button>
+      </div>
+    </header>
+
+    <main>
+      <div class="card">
+        <div class="cardHead">
+          <h2 class="title">Canvas-safe BYOK Gate</h2>
+          <p class="sub">
+            Get the model of your choice , try the gemini canvas mode by pasting the link in your browser and enjoy unlimited access (React/Babel/Tailwind).
+            This version has <b>zero external dependencies</b> so it always renders.
+          </p>
+        </div>
+
+        <div class="grid">
+          <div class="tile">
+            <h3>BYOK (Bring Your Own Key)</h3>
+            <p>Enter your Gemini API key. Stored in <b>sessionStorage</b> for this tab only.</p>
+            <div class="field">
+              <input id="apiKeyInput" type="password" placeholder="Paste API key (AIza...)" autocomplete="off" />
+              <button class="btn" id="toggleShow">Show</button>
+            </div>
+            <div class="row">
+              <button class="btn primary" id="saveKey">Save & Continue</button>
+              <button class="btn" id="clearKey">Clear</button>
+              <button class="btn" id="testKey">Test</button>
+            </div>
+            <div class="debug" id="debugBox"></div>
+          </div>
+
+          <div class="tile google-spotlight">
+            <h3>Unlimited (No API Key)</h3>
+            <p>
+              This does <b>not</b> power the in-app API calls (that requires a key). It opens the Gemini web page in a new tab and copies the link.
+            </p>
+            <div class="linkBox" id="shareLink">https://gemini.google.com/share/49cf64d2b8dc</div>
+            <div class="row">
+              <button class="btn" id="copyLink">Copy Link</button>
+              <button class="btn green" id="openGemini">Open Gemini</button>
+            </div>
+            <div class="footerNote">Security note: client-side keys are visible in source. Use for demos, not production.</div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Modal wrapper (re-uses same content block) -->
+  <div class="modalWrap" id="modalWrap" aria-hidden="true">
+    <div class="card" style="max-width: 920px; width: 100%;">
+      <div class="cardHead">
+        <h2 class="title">Choose Access Mode</h2>
+        <p class="sub">BYOK enables in-app processing. “Unlimited” opens Gemini in your browser.</p>
+      </div>
+      <div class="grid" style="padding-top: 0;">
+        <div class="tile">
+          <h3>BYOK (Bring Your Own Key)</h3>
+          <p>Enter your Gemini API key. Stored in this tab’s session.</p>
+          <div class="field">
+            <input id="apiKeyInputModal" type="password" placeholder="Paste API key (AIza...)" autocomplete="off" />
+            <button class="btn" id="toggleShowModal">Show</button>
+          </div>
+          <div class="row">
+            <button class="btn primary" id="saveKeyModal">Save & Continue</button>
+            <button class="btn" id="closeModal">Close</button>
+          </div>
+        </div>
+        <div class="tile google-spotlight">
+          <h3>Unlimited (No API Key)</h3>
+          <p>Copy this link and paste it into your browser address bar. We also try to open it for you.</p>
+          <div class="linkBox">https://gemini.google.com/share/49cf64d2b8dc</div>
+          <div class="row">
+            <button class="btn" id="copyLinkModal">Copy Link</button>
+            <button class="btn green" id="openGeminiModal">Open Gemini</button>
+          </div>
+          <div class="footerNote">Popups blocked? Paste the copied link manually.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toasts" id="toasts"></div>
+
+  <script>
+    (function(){
+      const GEMINI_SHARE_LINK = 'https://gemini.google.com/share/49cf64d2b8dc';
+      const KEY_KEY = 'gen_notes_api_key';
+      const MODE_KEY = 'gen_notes_auth_mode';
+
+      const $ = (id) => document.getElementById(id);
+
+      function getKey(){
+        try { return (sessionStorage.getItem(KEY_KEY) || '').trim(); } catch { return ''; }
+      }
+      function setKey(v){
+        try {
+          const k = (v || '').trim();
+          if (k) sessionStorage.setItem(KEY_KEY, k);
+          else sessionStorage.removeItem(KEY_KEY);
+        } catch {}
+      }
+      function getMode(){
+        try { return (sessionStorage.getItem(MODE_KEY) || '').trim(); } catch { return ''; }
+      }
+      function setMode(m){
+        try {
+          if (m) sessionStorage.setItem(MODE_KEY, m);
+          else sessionStorage.removeItem(MODE_KEY);
+        } catch {}
+      }
+
+      function toast(msg, type='info'){
+        const wrap = $('toasts');
+        const el = document.createElement('div');
+        el.className = 'toast';
+        el.innerHTML = `
+          <span class="pill ${type}">${type.toUpperCase()}</span>
+          <span>${escapeHtml(msg)}</span>
+          <button aria-label="Close">✕</button>
+        `;
+        el.querySelector('button').onclick = () => el.remove();
+        wrap.appendChild(el);
+        setTimeout(() => { if (el.isConnected) el.remove(); }, 4200);
+      }
+
+      function escapeHtml(s){
+        return String(s)
+          .replaceAll('&','&amp;')
+          .replaceAll('<','&lt;')
+          .replaceAll('>','&gt;')
+          .replaceAll('"','&quot;')
+          .replaceAll("'",'&#039;');
+      }
+
+      function updateBadge(){
+        const key = getKey();
+        const mode = getMode();
+        const dot = $('accessDot');
+        const text = $('accessText');
+
+        if (key) {
+          dot.classList.add('ok');
+          text.textContent = 'BYOK';
+        } else if (mode === 'unlimited') {
+          dot.classList.remove('ok');
+          dot.style.background = 'var(--g-yellow)';
+          text.textContent = 'UNLIMITED';
+        } else {
+          dot.classList.remove('ok');
+          dot.style.background = 'var(--g-yellow)';
+          text.textContent = 'ACCESS';
+        }
+
+        $('debugBox').textContent = `mode=${mode || '(none)'} | key=${key ? 'present' : 'missing'} | sessionStorage=${storageOk() ? 'ok' : 'blocked'}`;
+      }
+
+      function storageOk(){
+        try {
+          const t='__t';
+          sessionStorage.setItem(t,'1');
+          sessionStorage.removeItem(t);
+          return true;
+        } catch { return false; }
+      }
+
+      function openModal(){
+        $('modalWrap').classList.add('show');
+        $('modalWrap').setAttribute('aria-hidden','false');
+        $('apiKeyInputModal').value = getKey();
+        $('apiKeyInputModal').focus();
+      }
+
+      function closeModal(){
+        $('modalWrap').classList.remove('show');
+        $('modalWrap').setAttribute('aria-hidden','true');
+      }
+
+      async function copyLink(){
+        try {
+          await navigator.clipboard.writeText(GEMINI_SHARE_LINK);
+          toast('Gemini link copied. Paste it into your browser address bar.', 'success');
+        } catch {
+          toast('Clipboard blocked. Copy manually.', 'warning');
+        }
+      }
+
+      function openGemini(){
+        try {
+          window.open(GEMINI_SHARE_LINK, '_blank', 'noopener,noreferrer');
+          toast('Opened Gemini in a new tab (if your browser allows it).', 'info');
+        } catch {
+          toast('Popup blocked. Paste the link manually.', 'warning');
+        }
+      }
+
+      function saveKeyFrom(inputEl){
+        const v = (inputEl.value || '').trim();
+        if (!v) { toast('Paste a valid API key.', 'error'); return; }
+        setKey(v);
+        setMode('byok');
+        updateBadge();
+        closeModal();
+        toast('BYOK key saved for this tab session.', 'success');
+      }
+
+      function clearKey(){
+        setKey('');
+        updateBadge();
+        toast('Key cleared for this tab.', 'info');
+      }
+
+      function testKey(){
+        const key = getKey();
+        if (!key) {
+          toast('No key set. Open Access and enter your key.', 'warning');
+          openModal();
+          return;
+        }
+        toast('Key is present. API calls would use it.', 'success');
+      }
+
+      function setUnlimited(){
+        setKey('');
+        setMode('unlimited');
+        updateBadge();
+        toast('Unlimited mode selected (browser Gemini).', 'info');
+      }
+
+      // Wire main UI
+      $('openAccess').onclick = openModal;
+
+      $('toggleShow').onclick = () => {
+        const i = $('apiKeyInput');
+        i.type = (i.type === 'password') ? 'text' : 'password';
+        $('toggleShow').textContent = (i.type === 'password') ? 'Show' : 'Hide';
+      };
+      $('saveKey').onclick = () => saveKeyFrom($('apiKeyInput'));
+      $('clearKey').onclick = clearKey;
+      $('testKey').onclick = testKey;
+
+      $('copyLink').onclick = copyLink;
+      $('openGemini').onclick = () => { setUnlimited(); copyLink(); openGemini(); };
+
+      // Wire modal
+      $('closeModal').onclick = closeModal;
+      $('toggleShowModal').onclick = () => {
+        const i = $('apiKeyInputModal');
+        i.type = (i.type === 'password') ? 'text' : 'password';
+        $('toggleShowModal').textContent = (i.type === 'password') ? 'Show' : 'Hide';
+      };
+      $('saveKeyModal').onclick = () => {
+        // also mirror into main input for convenience
+        $('apiKeyInput').value = $('apiKeyInputModal').value;
+        saveKeyFrom($('apiKeyInputModal'));
+      };
+
+      $('copyLinkModal').onclick = copyLink;
+      $('openGeminiModal').onclick = () => { setUnlimited(); copyLink(); openGemini(); closeModal(); };
+
+      // Close modal when clicking the dark backdrop (not the card)
+      $('modalWrap').addEventListener('click', (e) => {
+        if (e.target === $('modalWrap')) closeModal();
+      });
+
+      // Initial state
+      $('shareLink').textContent = GEMINI_SHARE_LINK;
+      $('apiKeyInput').value = getKey();
+
+      updateBadge();
+
+      // Auto-open modal if needed
+      const mode = getMode();
+      const key = getKey();
+      if (!mode || (mode === 'byok' && !key)) openModal();
+
+      // Friendly warning
+      setTimeout(() => toast('Security notice: client-side keys are visible in page source. Use for demos, not production.', 'warning'), 900);
+    })();
+  </script>
+</body>
+</html>
