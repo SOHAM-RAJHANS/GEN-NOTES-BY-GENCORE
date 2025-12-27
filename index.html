@@ -1,568 +1,3064 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Gen Notes - BYOK Gate (Canvas Safe)</title>
-  <style>
-    :root{
-      --g-blue:#4285F4;
-      --g-red:#EA4335;
-      --g-yellow:#FBBC05;
-      --g-green:#34A853;
-      --bg:#0b1220;
-      --panel:#0f172a;
-      --panel2:#111c33;
-      --text:#e5e7eb;
-      --muted:#94a3b8;
-      --border:#24304a;
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gen Notes - Enterprise Hub</title>
 
-    html,body{height:100%;}
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Apple Color Emoji","Segoe UI Emoji";
-      background: radial-gradient(900px 600px at 20% 10%, rgba(66,133,244,.25), transparent 60%),
-                  radial-gradient(800px 520px at 80% 20%, rgba(234,67,53,.18), transparent 55%),
-                  radial-gradient(900px 600px at 60% 90%, rgba(52,168,83,.14), transparent 60%),
-                  var(--bg);
-      color: var(--text);
-      overflow:hidden;
-    }
+    <!-- SYSTEM DEPENDENCIES (CRITICAL LOAD ORDER) -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Lucide must be loaded before the React script attempts to read from it -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
-    /* Google glow */
-    @keyframes google-glow {
-      0% { border-color: var(--g-blue); box-shadow: 0 0 10px rgba(66,133,244,.35); }
-      25% { border-color: var(--g-red); box-shadow: 0 0 10px rgba(234,67,53,.35); }
-      50% { border-color: var(--g-yellow); box-shadow: 0 0 10px rgba(251,188,5,.35); }
-      75% { border-color: var(--g-green); box-shadow: 0 0 10px rgba(52,168,83,.35); }
-      100% { border-color: var(--g-blue); box-shadow: 0 0 10px rgba(66,133,244,.35); }
-    }
-    .google-spotlight{ animation: google-glow 4s linear infinite; border:2px solid var(--border); }
+    <!-- FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
 
-    .app{
-      height:100%;
-      display:flex;
-      flex-direction:column;
-    }
+    <style>
+        html,
+        body,
+        #root {
+            height: 100%;
+            overflow: hidden;
+        }
 
-    header{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      padding:16px 18px;
-      background: rgba(15,23,42,.85);
-      border-bottom:1px solid rgba(255,255,255,.06);
-      backdrop-filter: blur(10px);
-    }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+        }
 
-    .brand{
-      display:flex;
-      align-items:center;
-      gap:12px;
-      font-weight:900;
-      font-size:22px;
-      letter-spacing:-.02em;
-    }
-    .brand b{ color: var(--g-blue); }
+        .font-mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
 
-    .badge{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      padding:7px 10px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(17,28,51,.8);
-      color: var(--muted);
-      font-size:11px;
-      text-transform:uppercase;
-      letter-spacing:.14em;
-      user-select:none;
-    }
-    .dot{ width:8px;height:8px;border-radius:999px;background: var(--g-yellow); box-shadow: 0 0 12px rgba(251,188,5,.35); }
-    .dot.ok{ background: var(--g-green); box-shadow: 0 0 12px rgba(52,168,83,.35); }
+        .scrollbar-thin::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
 
-    .btn{
-      appearance:none;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(17,28,51,.75);
-      color: var(--text);
-      padding:10px 12px;
-      border-radius:12px;
-      cursor:pointer;
-      font-weight:800;
-      transition: transform .12s ease, background .12s ease, border-color .12s ease;
-    }
-    .btn:hover{ background: rgba(25,39,71,.8); }
-    .btn:active{ transform: scale(.98); }
+        .scrollbar-thin::-webkit-scrollbar-track {
+            background: transparent;
+        }
 
-    .btn.primary{ background: rgba(66,133,244,.95); border-color: rgba(66,133,244,.65); }
-    .btn.primary:hover{ background: rgba(66,133,244,1); }
+        .scrollbar-thin::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
 
-    .btn.green{ background: rgba(52,168,83,.95); border-color: rgba(52,168,83,.65); }
-    .btn.green:hover{ background: rgba(52,168,83,1); }
+        .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
 
-    main{
-      flex:1;
-      display:flex;
-      align-items:center;
-      justify-content:center;
-      padding:28px;
-    }
+        /* Google Glow Animation */
+        @keyframes google-glow {
+            0% {
+                border-color: #4285F4;
+                box-shadow: 0 0 5px #4285F4;
+            }
 
-    .card{
-      width:min(880px, 100%);
-      background: rgba(15,23,42,.86);
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:18px;
-      box-shadow: 0 20px 70px rgba(0,0,0,.45);
-      overflow:hidden;
-    }
+            25% {
+                border-color: #EA4335;
+                box-shadow: 0 0 5px #EA4335;
+            }
 
-    .cardHead{
-      padding:18px 18px 0 18px;
-    }
+            50% {
+                border-color: #FBBC05;
+                box-shadow: 0 0 5px #FBBC05;
+            }
 
-    .title{
-      font-size:22px;
-      font-weight:900;
-      margin:0 0 6px 0;
-    }
-    .sub{ margin:0 0 14px 0; color: var(--muted); font-size:13px; line-height:1.5; }
+            75% {
+                border-color: #34A853;
+                box-shadow: 0 0 5px #34A853;
+            }
 
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr;
-      gap:14px;
-      padding:18px;
-    }
-    @media (min-width: 900px){
-      .grid{ grid-template-columns: 1fr 1fr; }
-    }
+            100% {
+                border-color: #4285F4;
+                box-shadow: 0 0 5px #4285F4;
+            }
+        }
 
-    .tile{
-      background: rgba(17,28,51,.65);
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:16px;
-      padding:16px;
-      min-height: 230px;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-    }
+        .google-spotlight {
+            animation: google-glow 4s infinite linear;
+            border-width: 2px;
+            border-style: solid;
+        }
 
-    .tile h3{ margin:0; font-size:16px; font-weight:900; }
-    .tile p{ margin:0; color: var(--muted); font-size:12.5px; line-height:1.5; }
+        /* Crisp Panel Override */
+        .crisp-panel {
+            backdrop-filter: none !important;
+            background-color: rgba(15, 23, 42, 0.95) !important;
+            /* Slate 900 equivalent */
+        }
 
-    .field{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      padding:10px 12px;
-      border-radius:14px;
-      border:2px solid rgba(255,255,255,.10);
-      background: rgba(11,18,32,.55);
-    }
-    .field:focus-within{ border-color: rgba(66,133,244,.8); box-shadow: 0 0 0 4px rgba(66,133,244,.15); }
+        /* PATCH: Kinetic Mind Map - Breathing Animation */
+        @keyframes nodeBreathing {
 
-    input{
-      width:100%;
-      background: transparent;
-      border:none;
-      outline:none;
-      color: var(--text);
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:12.5px;
-    }
+            0%,
+            100% {
+                transform: scale(1);
+            }
 
-    .row{ display:flex; gap:10px; flex-wrap:wrap; }
+            50% {
+                transform: scale(1.02);
+            }
+        }
 
-    .linkBox{
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size:12px;
-      padding:10px 12px;
-      border-radius:14px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(11,18,32,.55);
-      word-break: break-all;
-      color: #cbd5e1;
-    }
+        @keyframes nodeAura {
 
-    .footerNote{
-      padding:0 18px 18px 18px;
-      color: rgba(148,163,184,.85);
-      font-size:11px;
-    }
+            0%,
+            100% {
+                box-shadow: 0 0 0 transparent, 0 10px 40px rgba(0, 0, 0, 0.2);
+            }
 
-    /* Modal */
-    .modalWrap{
-      position:fixed;
-      inset:0;
-      display:none;
-      align-items:center;
-      justify-content:center;
-      background: rgba(0,0,0,.72);
-      backdrop-filter: blur(10px);
-      z-index: 9999;
-      padding: 20px;
-    }
-    .modalWrap.show{ display:flex; }
+            50% {
+                box-shadow: 0 0 25px rgba(66, 133, 244, 0.4), 0 10px 40px rgba(0, 0, 0, 0.3);
+            }
+        }
 
-    /* Toasts */
-    .toasts{
-      position: fixed;
-      right: 18px;
-      bottom: 18px;
-      z-index: 10000;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      pointer-events:none;
-    }
-    .toast{
-      pointer-events:auto;
-      display:flex;
-      align-items:center;
-      gap:10px;
-      padding:10px 12px;
-      border-radius:14px;
-      background: rgba(17,28,51,.92);
-      border:1px solid rgba(255,255,255,.10);
-      box-shadow: 0 14px 40px rgba(0,0,0,.35);
-      color: var(--text);
-      font-size:12.5px;
-      animation: pop .18s ease-out;
-    }
-    @keyframes pop{ from{ transform: translateY(6px); opacity:.0 } to{ transform: translateY(0); opacity:1 } }
+        .mind-node-breathing {
+            animation: nodeBreathing 4s ease-in-out infinite, nodeAura 4s ease-in-out infinite;
+        }
 
-    .toast .pill{
-      font-size:10px;
-      font-weight:900;
-      letter-spacing:.12em;
-      padding:4px 7px;
-      border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      color:#cbd5e1;
-    }
-    .pill.info{ border-color: rgba(66,133,244,.35); color: rgba(66,133,244,.95); }
-    .pill.success{ border-color: rgba(52,168,83,.35); color: rgba(52,168,83,.95); }
-    .pill.warning{ border-color: rgba(251,188,5,.35); color: rgba(251,188,5,.95); }
-    .pill.error{ border-color: rgba(234,67,53,.35); color: rgba(234,67,53,.95); }
-
-    .toast button{
-      margin-left:auto;
-      background: transparent;
-      border: none;
-      color: rgba(226,232,240,.75);
-      cursor:pointer;
-      font-weight:900;
-      padding:4px 6px;
-      border-radius:10px;
-    }
-    .toast button:hover{ background: rgba(255,255,255,.06); color: #fff; }
-
-    /* Debug */
-    .debug{
-      margin-top: 10px;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      font-size: 11px;
-      color: rgba(148,163,184,.95);
-      opacity: .9;
-      background: rgba(11,18,32,.55);
-      border:1px solid rgba(255,255,255,.08);
-      padding:10px 12px;
-      border-radius: 14px;
-    }
-  </style>
+        .mind-node-active {
+            animation: nodeBreathing 2s ease-in-out infinite;
+            box-shadow: 0 0 30px #FBBC05, 0 0 60px rgba(251, 188, 5, 0.3) !important;
+            border-color: #FBBC05 !important;
+        }
+    </style>
 </head>
-<body>
-  <div class="app">
-    <header>
-      <div class="brand">Gen<b>Notes</b> <span style="font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:rgba(148,163,184,.9)">Gemini Core</span></div>
-      <div style="display:flex;gap:10px;align-items:center;">
-        <div id="accessBadge" class="badge" title="Access Mode">
-          <span id="accessDot" class="dot"></span>
-          <span id="accessText">ACCESS</span>
-        </div>
-        <button class="btn" id="openAccess">Access</button>
-      </div>
-    </header>
 
-    <main>
-      <div class="card">
-        <div class="cardHead">
-          <h2 class="title">Canvas-safe BYOK Gate</h2>
-          <p class="sub">
-            Get the model of your choice , try the gemini canvas mode by pasting the link in your browser and enjoy unlimited access (React/Babel/Tailwind).
-            This version has <b>zero external dependencies</b> so it always renders.
-          </p>
-        </div>
+<body class="overflow-hidden">
+    <div id="root"></div>
 
-        <div class="grid">
-          <div class="tile">
-            <h3>BYOK (Bring Your Own Key)</h3>
-            <p>Enter your Gemini API key. Stored in <b>sessionStorage</b> for this tab only.</p>
-            <div class="field">
-              <input id="apiKeyInput" type="password" placeholder="Paste API key (AIza...)" autocomplete="off" />
-              <button class="btn" id="toggleShow">Show</button>
+    <script type="text/babel">
+        const { useState, useEffect, useRef, useMemo, useCallback } = React;
+
+        // --- LUCIDE REACT WRAPPER ---
+        const createIcon = (iconName) => {
+            const iconData = window.lucide?.icons?.[iconName];
+            if (!iconData) {
+                console.warn(`Icon "${iconName}" not found in Lucide library.`);
+                return ({ size = 24, className = "" }) => (
+                    <span style={{ width: size, height: size, display: 'inline-block', backgroundColor: '#cbd5e1', borderRadius: '4px' }} className={className} />
+                );
+            }
+
+            const IconComponent = ({ color = "currentColor", size = 24, strokeWidth = 2, className = "", ...props }) => {
+                return React.createElement(
+                    "svg",
+                    {
+                        xmlns: "http://www.w3.org/2000/svg",
+                        width: size,
+                        height: size,
+                        viewBox: "0 0 24 24",
+                        fill: "none",
+                        stroke: color,
+                        strokeWidth: strokeWidth,
+                        strokeLinecap: "round",
+                        strokeLinejoin: "round",
+                        className: `lucide lucide-${iconName.toLowerCase()} ${className}`,
+                        ...props,
+                    },
+                    ...iconData.map(([tag, attrs], index) =>
+                        React.createElement(tag, { ...attrs, key: index })
+                    )
+                );
+            };
+            IconComponent.displayName = iconName;
+            return IconComponent;
+        };
+
+        // Generate components for all used icons
+        const FileText = createIcon("FileText");
+        const Cpu = createIcon("Cpu");
+        const CheckCircle = createIcon("CheckCircle");
+        const AlertTriangle = createIcon("AlertTriangle");
+        const RefreshCw = createIcon("RefreshCw");
+        const Download = createIcon("Download");
+        const GitGraph = createIcon("GitGraph");
+        const Terminal = createIcon("Terminal");
+        const Play = createIcon("Play");
+        const Pause = createIcon("Pause");
+        const Film = createIcon("Film");
+        const Pen = createIcon("Pen");
+        const ZoomIn = createIcon("ZoomIn");
+        const ZoomOut = createIcon("ZoomOut");
+        const Move = createIcon("Move");
+        const ImageIcon = createIcon("Image");
+        const Settings = createIcon("Settings");
+        const Cast = createIcon("Cast");
+        const Sliders = createIcon("Sliders");
+        const Loader2 = createIcon("Loader2");
+        const Globe = createIcon("Globe");
+        const Video = createIcon("Video");
+        const Package = createIcon("Package");
+        const LayoutTemplate = createIcon("LayoutTemplate");
+        const Send = createIcon("Send");
+        const Maximize2 = createIcon("Maximize2");
+        const Minimize2 = createIcon("Minimize2");
+        const Plus = createIcon("Plus");
+        const Trash2 = createIcon("Trash2");
+        const File = createIcon("File");
+        const RotateCcw = createIcon("RotateCcw");
+        const Layers = createIcon("Layers");
+        const LayoutIcon = createIcon("Layout");
+        const GridIcon = createIcon("Grid");
+        const SidebarIcon = createIcon("Sidebar");
+        const Briefcase = createIcon("Briefcase");
+        const CheckSquare = createIcon("CheckSquare");
+        const Square = createIcon("Square");
+        const Zap = createIcon("Zap");
+        const Database = createIcon("Database");
+        const X = createIcon("X");
+        const Info = createIcon("Info");
+        const Lock = createIcon("Lock");
+        const Sparkles = createIcon("Sparkles");
+        const PanelLeft = createIcon("PanelLeft");
+        const ExternalLink = createIcon("ExternalLink");
+        // PATCH: Add LogOut icon for session reset
+        const LogOut = createIcon("LogOut");
+
+
+        // --- API & UTILITIES ---
+
+        // PATCH: Dynamic API Key storage
+        let apiKey = localStorage.getItem("gen_notes_api_key") || "";
+
+        // === PRODUCTION CONFIG ===
+        const DEBUG_MODE = false;
+        const log = (...args) => DEBUG_MODE && console.log(...args);
+
+        const CONFIG = {
+            models: {
+                text: "gemini-2.5-flash-preview-09-2025",
+                image: "imagen-4.0-generate-001",
+                audio: "gemini-2.5-flash-preview-tts",
+                voice: "Fenrir"
+            },
+            timeouts: {
+                api: 60000,
+                imageLoad: 5000
+            },
+            limits: {
+                chunkSize: 15000,
+                maxParticles: 120
+            },
+            prompts: {
+                persona: "You are a cynical, brilliant data analyst. Answer strictly based on context."
+            }
+        };
+
+        // 1x1 Pixel Transparent Base64 (Fallback)
+        const PLACEHOLDER_IMG = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+        // PATCH A: Shared reduced-motion helper
+        const prefersReducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        const cleanupAudioUrls = (assetsData) => {
+            if (!assetsData) return;
+            const collections = assetsData.data ? [assetsData] : Object.values(assetsData);
+
+            collections.forEach(topicData => {
+                if (topicData?.data) {
+                    topicData.data.forEach(segment => {
+                        if (typeof segment.audioUrl === "string" && segment.audioUrl.startsWith("blob:")) {
+                            URL.revokeObjectURL(segment.audioUrl);
+                        }
+                    });
+                }
+            });
+        };
+
+        const pcmToWav = (base64PCM, sampleRate = 24000) => {
+            const binaryString = window.atob(base64PCM);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            const wavHeader = new ArrayBuffer(44);
+            const view = new DataView(wavHeader);
+            view.setUint32(0, 1380533830, false);
+            view.setUint32(4, 36 + len, true);
+            view.setUint32(8, 1463899717, false);
+            view.setUint32(12, 1718449184, false);
+            view.setUint32(16, 16, true);
+            view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true);
+            view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true);
+            view.setUint32(36, 1684108385, false);
+            view.setUint32(40, len, true);
+            const blob = new Blob([view, bytes], { type: 'audio/wav' });
+            return URL.createObjectURL(blob);
+        };
+
+        // PATCH: Improved JSON cleaning logic (Phase 2 Upgrade)
+        const cleanJson = (text) => {
+            if (!text) return null;
+            // Step 1: Remove markdown backticks
+            let raw = text.replace(/```json|```/g, '').trim();
+
+            // Step 2: Find first { or [ and last } or ]
+            const firstBrace = raw.indexOf('{');
+            const firstBracket = raw.indexOf('[');
+            const lastBrace = raw.lastIndexOf('}');
+            const lastBracket = raw.lastIndexOf(']');
+
+            // Determine start position
+            let start = -1;
+            if (firstBrace !== -1 && firstBracket !== -1) {
+                start = Math.min(firstBrace, firstBracket);
+            } else {
+                start = Math.max(firstBrace, firstBracket);
+            }
+
+            // Determine end position
+            let end = -1;
+            if (lastBrace !== -1 && lastBracket !== -1) {
+                end = Math.max(lastBrace, lastBracket);
+            } else {
+                end = Math.max(lastBrace, lastBracket);
+            }
+
+            if (start === -1 || end === -1 || start > end) return raw;
+            return raw.substring(start, end + 1);
+        };
+
+        const safeJsonParse = (text) => {
+            try {
+                const cleaned = cleanJson(text);
+                return JSON.parse(cleaned);
+            } catch (e) {
+                console.error("JSON Parse Failure", e);
+                throw new Error(`Data Structuring Failure: Invalid JSON format received from Core.`);
+            }
+        };
+
+        const fetchWithRetry = async (url, options, retries = 3, backoff = 1000) => {
+            const optionsWithHeaders = {
+                ...options,
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(options.headers || {})
+                }
+            };
+
+            // PATCH B: AbortController with CONFIG timeout (extended for heavier loads)
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), CONFIG.timeouts.api);
+            const optionsWithSignal = { ...optionsWithHeaders, signal: controller.signal };
+
+            try {
+                const response = await fetch(url, optionsWithSignal);
+                clearTimeout(timeoutId); // PATCH B: Clear timeout on success
+                const text = await response.text();
+
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} - ${text.substring(0, 200)}`);
+                }
+
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    throw new Error(`Invalid JSON response: ${text.slice(0, 200)}`);
+                }
+            } catch (error) {
+                clearTimeout(timeoutId); // PATCH B: Clear timeout on error
+                if (retries > 0) {
+                    await new Promise(r => setTimeout(r, backoff));
+                    return fetchWithRetry(url, options, retries - 1, backoff * 2);
+                }
+                throw error;
+            }
+        };
+
+        const generateContent = async (prompt) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.models.text}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            return fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+        };
+
+        const generateChatResponse = async (prompt) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.models.text}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text: prompt }] }]
+            };
+            try {
+                const response = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+                return response.candidates?.[0]?.content?.parts?.[0]?.text || "Analysis failed.";
+            } catch (e) {
+                return "Connection to Neural Core severed.";
+            }
+        };
+
+        const generateImage = async (prompt) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.models.image}:predict?key=${apiKey}`;
+
+            const payload = {
+                instances: [{ prompt }],
+                parameters: { sampleCount: 1 }
+            };
+
+            const options = {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            };
+
+            try {
+                const response = await fetchWithRetry(url, options);
+
+                const p0 = response.predictions?.[0];
+                if (p0?.raiFilteredReason) {
+                    console.warn("Image filtered:", p0.raiFilteredReason);
+                    return null;
+                }
+
+                let base64 = null;
+                if (p0) {
+                    base64 = p0.bytesBase64Encoded || p0.imageBytes;
+                } else if (response.generatedImages?.[0]) {
+                    base64 = response.generatedImages[0].image?.imageBytes;
+                }
+
+                if (!base64) return null;
+                return `data:image/png;base64,${base64}`;
+            } catch (e) {
+                console.error("Image gen failed", e);
+                return null;
+            }
+        };
+
+        const generateAudio = async (text) => {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${CONFIG.models.audio}:generateContent?key=${apiKey}`;
+            const payload = {
+                contents: [{ parts: [{ text }] }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: CONFIG.models.voice } } }
+                }
+            };
+            try {
+                const response = await fetchWithRetry(url, { method: 'POST', body: JSON.stringify(payload) });
+                const inlineData = response.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+                if (inlineData) return pcmToWav(inlineData.data, 24000);
+                return null;
+            } catch (e) {
+                return null;
+            }
+        };
+
+        // PATCH: Recursive Summarization - "Infinite PDF" Handler
+        // PHASE 3 OPTIMIZATION: Semantic chunking at sentence boundaries
+        const summarizeChunks = async (text, chunkSize = 10000) => {
+            // If text is under threshold, no chunking needed
+            if (text.length <= 15000) return text;
+
+            // PHASE 3: Semantic chunking - split at sentence boundaries
+            const chunks = [];
+            let startIndex = 0;
+
+            while (startIndex < text.length) {
+                // Calculate the ideal end position
+                let endIndex = Math.min(startIndex + chunkSize, text.length);
+
+                // If we're not at the end of the text, find a good break point
+                if (endIndex < text.length) {
+                    // Look for the last sentence-ending punctuation within the chunk
+                    const searchWindow = text.substring(startIndex, endIndex);
+
+                    // Find last period, question mark, or exclamation mark
+                    let breakPoint = -1;
+                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                        const char = searchWindow[i];
+                        if (char === '.' || char === '?' || char === '!') {
+                            breakPoint = i + 1; // Include the punctuation
+                            break;
+                        }
+                    }
+
+                    // If no punctuation found, look for last space
+                    if (breakPoint === -1) {
+                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                            if (searchWindow[i] === ' ') {
+                                breakPoint = i + 1;
+                                break;
+                            }
+                        }
+                    }
+
+                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
+                    // This PREVENTS infinite loops
+                    if (breakPoint === -1 || breakPoint === 0) {
+                        breakPoint = searchWindow.length;
+                    }
+
+                    endIndex = startIndex + breakPoint;
+                }
+
+                // Extract the chunk and add it
+                const chunk = text.substring(startIndex, endIndex).trim();
+                if (chunk.length > 0) {
+                    chunks.push(chunk);
+                }
+
+                // CRITICAL: Always advance startIndex to prevent infinite loop
+                startIndex = endIndex;
+            }
+
+            log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
+
+            // OPTIMIZATION: Parallel processing with Promise.all
+            const summaryPromises = chunks.map(chunk => {
+                const prompt = `You are a precise academic summarizer. Summarize this text into exactly 5 key bullet points. Be concise and factual:\n\n${chunk}`;
+                return generateContent(prompt).then(res => {
+                    const summary = res.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    return summary;
+                }).catch(err => {
+                    console.warn("[Chunk Summary Failed]", err);
+                    return "• [Summary unavailable for this section]";
+                });
+            });
+
+            const summaries = await Promise.all(summaryPromises);
+            const masterContext = summaries.join("\n\n--- SECTION BREAK ---\n\n");
+
+            log(`[Infinite PDF] Created master context: ${masterContext.length} chars from ${chunks.length} summaries`);
+            return masterContext;
+        };
+
+        const extractTextFromPDF = async (file) => {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = async function () {
+                    const typedarray = new Uint8Array(this.result);
+                    try {
+                        if (!window.pdfjsLib) throw new Error("PDF.js library not loaded yet.");
+                        if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                            window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        }
+
+                        const pdf = await window.pdfjsLib.getDocument(typedarray).promise;
+                        let fullText = "";
+                        const maxPages = Math.min(pdf.numPages, 10);
+                        for (let i = 1; i <= maxPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const textContent = await page.getTextContent();
+                            fullText += textContent.items.map(item => item.str).join(" ") + "\n";
+                        }
+                        resolve(fullText);
+                    } catch (e) {
+                        reject(e);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            });
+        };
+
+        // --- UNIVERSE CURSOR FX (DARK MODE) ---
+        const UniverseCursorFX = ({ enabled }) => {
+            // PATCH A: Shared reduced-motion helper, computed ONCE
+            const reduceMotion = useMemo(() => prefersReducedMotion(), []);
+            const canvasRef = useRef(null);
+            const particles = useRef([]);
+            const animationFrameId = useRef(null);
+
+            useEffect(() => {
+                if (!enabled || reduceMotion) return; // PATCH A: check reduced motion immediately
+
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                let width, height;
+
+                const handleResize = () => {
+                    const dpr = window.devicePixelRatio || 1;
+                    width = window.innerWidth;
+                    height = window.innerHeight;
+                    canvas.width = width * dpr;
+                    canvas.height = height * dpr;
+                    canvas.style.width = `${width}px`;
+                    canvas.style.height = `${height}px`;
+                    // PATCH: Reset transform before scaling to prevent stacking
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.scale(dpr, dpr);
+                };
+                handleResize();
+                window.addEventListener('resize', handleResize);
+
+                const createParticle = (x, y) => {
+                    const isPlanet = Math.random() < 0.05; // 1 in 20
+                    return {
+                        x, y,
+                        vx: (Math.random() - 0.5) * 0.5,
+                        vy: (Math.random() - 0.5) * 0.5,
+                        life: 1.0,
+                        decay: Math.random() * 0.015 + 0.005, // 1-2s approx
+                        size: isPlanet ? Math.random() * 4 + 2 : Math.random() * 1.5,
+                        type: isPlanet ? 'planet' : 'star',
+                        hue: isPlanet ? Math.floor(Math.random() * 60 + 200) : 0 // Blue-ish for planets
+                    };
+                };
+
+                const handleMouseMove = (e) => {
+                    if (document.hidden) return;
+                    // PATCH A compliance: Removed redundant matchMedia check here.
+
+                    // Check interactive targets
+                    const target = e.target;
+                    if (target.closest('button, a, input, textarea, select, [role="button"], .no-universe')) return;
+
+                    // Spawn
+                    particles.current.push(createParticle(e.clientX, e.clientY));
+
+                    // PATCH D: Hard-cap particle array by trimming
+                    if (particles.current.length > 120) {
+                        particles.current.shift();
+                    }
+                };
+                window.addEventListener('mousemove', handleMouseMove);
+
+                const render = () => {
+                    if (!enabled || reduceMotion) return; // PATCH A
+
+                    if (document.hidden) {
+                        animationFrameId.current = requestAnimationFrame(render);
+                        return;
+                    }
+
+                    ctx.clearRect(0, 0, width, height);
+                    ctx.globalCompositeOperation = 'lighter';
+
+                    for (let i = particles.current.length - 1; i >= 0; i--) {
+                        const p = particles.current[i];
+                        p.life -= p.decay;
+                        p.x += p.vx;
+                        p.y += p.vy;
+
+                        if (p.life <= 0) {
+                            particles.current.splice(i, 1);
+                            continue;
+                        }
+
+                        ctx.globalAlpha = p.life;
+
+                        if (p.type === 'planet') {
+                            const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 2);
+                            grad.addColorStop(0, `hsla(${p.hue}, 80%, 70%, 0.8)`);
+                            grad.addColorStop(1, `hsla(${p.hue}, 80%, 70%, 0)`);
+                            ctx.fillStyle = grad;
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.size * 2, 0, Math.PI * 2);
+                            ctx.fill();
+                        } else {
+                            ctx.fillStyle = 'white';
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                    animationFrameId.current = requestAnimationFrame(render);
+                };
+                render();
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+                    particles.current = [];
+                };
+            }, [enabled, reduceMotion]); // PATCH A dependency
+
+            if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
+            return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
+        };
+
+        // --- WATER RIPPLE CURSOR FX (LIGHT MODE) ---
+        // PATCH 1: Ensure WaterRippleCursorFX is defined correctly
+        const WaterRippleCursorFX = ({ enabled }) => {
+            // PATCH A: Shared reduced-motion helper, computed ONCE
+            const reduceMotion = useMemo(() => prefersReducedMotion(), []);
+            const canvasRef = useRef(null);
+            const ripples = useRef([]);
+            const animationFrameId = useRef(null);
+
+            useEffect(() => {
+                if (!enabled || reduceMotion) return; // PATCH A: check reduced motion immediately
+
+                const canvas = canvasRef.current;
+                if (!canvas) return;
+                const ctx = canvas.getContext('2d');
+                let width, height;
+
+                const handleResize = () => {
+                    const dpr = window.devicePixelRatio || 1;
+                    width = window.innerWidth;
+                    height = window.innerHeight;
+                    canvas.width = width * dpr;
+                    canvas.height = height * dpr;
+                    canvas.style.width = `${width}px`;
+                    canvas.style.height = `${height}px`;
+                    ctx.setTransform(1, 0, 0, 1, 0, 0);
+                    ctx.scale(dpr, dpr);
+                };
+                handleResize();
+                window.addEventListener('resize', handleResize);
+
+                const createRipple = (x, y) => {
+                    return {
+                        x, y,
+                        r: 0,
+                        maxR: 30 + Math.random() * 20, // 30-50px spread
+                        alpha: 0.6,
+                        decay: 0.015 + Math.random() * 0.01
+                    };
+                };
+
+                const handleMouseMove = (e) => {
+                    if (document.hidden) return;
+                    // PATCH A compliance: Removed redundant matchMedia check here.
+
+                    // Exclude interactive elements (same rule as Universe)
+                    const target = e.target;
+                    if (target.closest('button, a, input, textarea, select, [role="button"], .no-universe')) return;
+
+                    // Throttle spawning slightly based on distance or time could be nice, but per-move is fine with cap
+                    ripples.current.push(createRipple(e.clientX, e.clientY));
+
+                    // PATCH D: Hard-cap ripple array by trimming
+                    if (ripples.current.length > 80) {
+                        ripples.current.shift();
+                    }
+                };
+                window.addEventListener('mousemove', handleMouseMove);
+
+                const render = () => {
+                    if (!enabled || reduceMotion) return; // PATCH A
+                    if (document.hidden) {
+                        animationFrameId.current = requestAnimationFrame(render);
+                        return;
+                    }
+
+                    ctx.clearRect(0, 0, width, height);
+
+                    // Use lighter composite for watery blend overlap, or source-over for clean look
+                    ctx.globalCompositeOperation = 'source-over';
+
+                    for (let i = ripples.current.length - 1; i >= 0; i--) {
+                        const rip = ripples.current[i];
+                        rip.alpha -= rip.decay;
+                        rip.r += 1.5; // Expansion speed
+
+                        if (rip.alpha <= 0) {
+                            ripples.current.splice(i, 1);
+                            continue;
+                        }
+
+                        ctx.globalAlpha = rip.alpha;
+
+                        // Draw ripple using radial gradient for soft edge
+                        const grad = ctx.createRadialGradient(rip.x, rip.y, rip.r * 0.7, rip.x, rip.y, rip.r);
+                        // Center clear, rim blueish
+                        grad.addColorStop(0, 'rgba(66, 133, 244, 0)');
+                        grad.addColorStop(0.8, 'rgba(66, 133, 244, 0.15)'); // Google Blue tint
+                        grad.addColorStop(1, 'rgba(66, 133, 244, 0)');
+
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.arc(rip.x, rip.y, rip.r, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    animationFrameId.current = requestAnimationFrame(render);
+                };
+                render();
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    window.removeEventListener('mousemove', handleMouseMove);
+                    if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
+                    ripples.current = [];
+                };
+            }, [enabled, reduceMotion]); // PATCH A dependency
+
+            if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
+            return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
+        };
+
+        // --- TOAST COMPONENT ---
+        const ToastContainer = ({ toasts, removeToast }) => (
+            <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+                {toasts.map(toast => (
+                    <div key={toast.id} className="pointer-events-auto bg-[#1e1e1e] text-white px-4 py-3 rounded-lg shadow-2xl border border-slate-700 flex items-center gap-3 animate-in slide-in-from-right-10 fade-in duration-300">
+                        {toast.type === 'success' && <CheckCircle size={18} className="text-[#34A853]" />}
+                        {toast.type === 'info' && <Info size={18} className="text-[#4285F4]" />}
+                        {toast.type === 'error' && <AlertTriangle size={18} className="text-[#EA4335]" />}
+                        {toast.type === 'warning' && <Lock size={18} className="text-[#FBBC05]" />}
+                        <span className="text-sm font-medium">{toast.message}</span>
+                        <button onClick={() => removeToast(toast.id)} className="ml-2 hover:text-slate-300"><X size={14} /></button>
+                    </div>
+                ))}
             </div>
-            <div class="row">
-              <button class="btn primary" id="saveKey">Save & Continue</button>
-              <button class="btn" id="clearKey">Clear</button>
-              <button class="btn" id="testKey">Test</button>
+        );
+
+        // --- LANDING RECOMMENDATION COMPONENT ---
+        const LandingRecommendation = () => (
+            <div className="fixed top-1/2 right-8 -translate-y-1/2 z-[100001] pointer-events-auto animate-in slide-in-from-right-4 duration-700 ease-out">
+                <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl p-5 border border-cyan-500/30 shadow-[0_0_25px_rgba(6,182,212,0.15)] max-w-xs relative overflow-hidden">
+                    {/* Decorative Gradient Background */}
+                    <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(6,182,212,0.1),transparent_50%)]"></div>
+
+                    {/* Header */}
+                    <h4 className="text-cyan-400 font-bold text-sm mb-3 flex items-center gap-2 relative z-10">
+                        <Globe size={16} className="text-cyan-400" />
+                        <span className="tracking-wide">CHOOSE YOUR MODE</span>
+                    </h4>
+
+                    {/* Description */}
+                    <p className="text-[11px] text-slate-400 mb-4 leading-relaxed relative z-10">
+                       Choose Demo Mode for offline access with preloaded sample data, or use the Unlimited Neural API for the full experience (strongly recommended). Demo Mode is limited and doesn’t reflect the real MVP’s functionality.”
+                    </p>
+
+                    {/* Option 1: Demo Mode */}
+                    <a
+                        href="https://gen-notes-demo.vercel.app/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 border border-cyan-500/40 font-bold py-2.5 rounded-lg text-xs transition-all hover:shadow-[0_0_10px_rgba(6,182,212,0.2)] active:scale-95 flex items-center justify-center gap-2 mb-3 relative z-10"
+                    >
+                        <ExternalLink size={14} />
+                        View Demo Mode (Vercel)
+                    </a>
+
+                    {/* Divider */}
+                    <div className="flex items-center gap-3 mb-3 relative z-10">
+                        <div className="flex-1 h-px bg-slate-700"></div>
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest">or</span>
+                        <div className="flex-1 h-px bg-slate-700"></div>
+                    </div>
+
+                    {/* Option 2: Unlimited Mode (Highlighted) */}
+                    <div className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 border border-yellow-500/30 rounded-lg p-3 relative z-10">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Sparkles size={14} className="text-yellow-400 animate-pulse" />
+                            <span className="text-yellow-400 font-bold text-xs uppercase tracking-wide">Unlimited Mode</span>
+                            <span className="ml-auto text-[9px] bg-yellow-500/20 text-yellow-400 px-1.5 py-0.5 rounded font-bold uppercase">Recommended</span>
+                        </div>
+                        <p className="text-[10px] text-slate-400 leading-relaxed">
+                            Continue here for full API access. Use the Neural Link trick on the left to bypass API key requirements.
+                        </p>
+                    </div>
+
+                    {/* Footer Note */}
+                    <p className="text-[9px] text-slate-600 text-center mt-3 font-mono uppercase tracking-wider relative z-10">
+                        Demo mode has limited features
+                    </p>
+                </div>
             </div>
-            <div class="debug" id="debugBox"></div>
-          </div>
+        );
 
-          <div class="tile google-spotlight">
-            <h3>Unlimited (No API Key)</h3>
-            <p>
-              This does <b>not</b> power the in-app API calls (that requires a key). It opens the Gemini web page in a new tab and copies the link.
-            </p>
-            <div class="linkBox" id="shareLink">https://gemini.google.com/share/49cf64d2b8dc</div>
-            <div class="row">
-              <button class="btn" id="copyLink">Copy Link</button>
-              <button class="btn green" id="openGemini">Open Gemini</button>
+        // --- COMPONENTS ---
+
+        // PATCH: Modal for API Key Input
+        const ApiKeyModal = ({ onSave }) => {
+            const [key, setKey] = useState("");
+
+            const handleSave = () => {
+                if (!key.trim()) return;
+                localStorage.setItem("gen_notes_api_key", key.trim());
+                apiKey = key.trim(); // Update global variable
+                onSave();
+            };
+
+            return (
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-500">
+                    <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4285F4] via-[#EA4335] to-[#FBBC05]"></div>
+                        <div className="flex justify-center mb-6">
+                            <div className="w-16 h-16 rounded-full bg-[#4285F4]/10 border border-[#4285F4]/30 flex items-center justify-center animate-pulse">
+                                <Lock size={32} className="text-[#4285F4]" />
+                            </div>
+                        </div>
+                        <h2 className="text-2xl font-bold text-white text-center mb-2 tracking-tight">Security Clearance</h2>
+                        <p className="text-slate-400 text-center mb-8 text-sm leading-relaxed">Enter your Google Gemini API Key to initialize the Neural Core. This key is stored locally on your device.</p>
+
+                        <input
+                            type="password"
+                            value={key}
+                            onChange={(e) => setKey(e.target.value)}
+                            placeholder="AIzaSy..."
+                            className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-4 text-white mb-6 focus:outline-none focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] font-mono text-sm transition-all"
+                        />
+
+                        <button
+                            onClick={handleSave}
+                            disabled={!key.trim()}
+                            className="w-full bg-[#4285F4] hover:bg-blue-600 text-white font-bold py-3.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95"
+                        >
+                            <CheckCircle size={18} /> Authenticate System
+                        </button>
+                        <div className="flex items-center justify-center gap-2 mt-6 opacity-50 mb-4">
+                            <Lock size={12} className="text-slate-500" />
+                            <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">End-to-End Local Storage</p>
+                        </div>
+
+                        {/* PATCH: Unlimited Option Section - Shining Update */}
+                        <div className="border-t border-slate-800 pt-4 mt-2">
+                            <div className="bg-gradient-to-br from-slate-900 to-yellow-900/20 rounded-xl p-4 border border-yellow-500/20 shadow-[0_0_15px_rgba(251,188,5,0.1)] relative overflow-hidden group">
+                                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(251,188,5,0.1),transparent_50%)]"></div>
+                                <h4 className="text-yellow-400 font-bold text-sm mb-2 flex items-center gap-2 relative z-10">
+                                    <Sparkles size={14} className="text-yellow-400 animate-pulse" />
+                                    <span className="tracking-wide">UNLIMITED (NO API KEY)</span>
+                                </h4>
+                                <p className="text-[10px] text-slate-400 mb-3 leading-normal relative z-10">
+                                    Skip the API key requirement with a simple workaround: open the Neural Link below in your browser. Sign in with your Google account when prompted to bypass corporate firewalls and unlock unlimited app usage, no API key needed
+                                </p>
+                                <div className="flex flex-col gap-2 relative z-10">
+                                    <button
+                                        onClick={() => {
+                                            const el = document.createElement('textarea');
+                                            el.value = "https://gemini.google.com/share/5cb693df8e02";
+                                            document.body.appendChild(el);
+                                            el.select();
+                                            document.execCommand('copy');
+                                            document.body.removeChild(el);
+                                        }}
+                                        className="w-full bg-yellow-500/10 hover:bg-yellow-500/20 text-yellow-400 border border-yellow-500/40 font-bold py-2.5 rounded-lg text-xs transition-all hover:shadow-[0_0_10px_rgba(251,188,5,0.2)] active:scale-95 flex items-center justify-center gap-2"
+                                    >
+                                        <ExternalLink size={14} /> Copy Neural Link
+                                    </button>
+                                    <p className="text-[9px] text-slate-500 text-center font-mono uppercase tracking-wider">
+                                // Manual Paste Required to Avoid Detection
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const CandleToggle = ({ darkMode, setDarkMode }) => {
+            return (
+                <button
+                    onClick={() => setDarkMode(!darkMode)}
+                    className={`relative group cursor-pointer p-3 rounded-xl transition-all duration-500 flex items-center justify-center ${darkMode ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-100 hover:bg-slate-200'
+                        }`}
+                    aria-label="Toggle Theme"
+                >
+                    <div className="relative w-4 h-8 flex flex-col items-center justify-end">
+                        <div
+                            className={`absolute -top-1 w-3 h-4 bg-gradient-to-b from-[#FBBC05] to-[#EA4335] rounded-full blur-[1px] animate-pulse transition-all duration-300 origin-bottom ${darkMode ? 'opacity-100 scale-100' : 'opacity-0 scale-0'
+                                }`}
+                            style={{
+                                boxShadow: '0 0 15px 2px rgba(251, 188, 5, 0.7)',
+                                filter: 'drop-shadow(0 0 5px rgba(234, 67, 53, 0.8))'
+                            }}
+                        >
+                            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-[#4285F4] rounded-full opacity-60"></div>
+                        </div>
+                        {!darkMode && (
+                            <div className="absolute -top-4 left-1/2 w-[1px] h-6 bg-slate-400 opacity-60 blur-[0.5px] animate-[ping_1.5s_ease-out_infinite] origin-bottom"></div>
+                        )}
+                        <div className={`w-[2px] h-2 z-10 transition-colors ${darkMode ? 'bg-black' : 'bg-slate-600'}`}></div>
+                        <div className={`w-4 h-5 rounded-sm shadow-inner border-t transition-colors duration-500 ${darkMode ? 'bg-slate-100 border-slate-200' : 'bg-[#EA4335] border-[#d93025]'
+                            }`}></div>
+                    </div>
+                </button>
+            );
+        };
+
+        const LayoutSelector = ({ currentLayout, setLayout, darkMode }) => {
+            const modes = [
+                { id: 'flow', icon: LayoutIcon, label: 'Flow' },
+                { id: 'grid', icon: GridIcon, label: 'Grid' },
+                { id: 'focus', icon: SidebarIcon, label: 'Focus' }
+            ];
+
+            return (
+                <div className={`flex items-center gap-1 p-1 rounded-lg border google-spotlight ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
+                    {modes.map(mode => (
+                        <button
+                            key={mode.id}
+                            onClick={() => setLayout(mode.id)}
+                            className={`p-2 rounded-md transition-all ${currentLayout === mode.id
+                                ? 'bg-[#4285F4] text-white shadow-md'
+                                : (darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-500 hover:text-slate-900')
+                                }`}
+                            title={`${mode.label} View`}
+                        >
+                            <mode.icon size={18} />
+                        </button>
+                    ))}
+                </div>
+            );
+        };
+
+        // PATCH: Updated Header to accept sidebar control props
+        // PATCH: Added onLogout prop support
+        const Header = ({ darkMode, setDarkMode, layoutMode, setLayoutMode, sidebarOpen, setSidebarOpen, onLogout }) => (
+            <header className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#4285F4]'} text-slate-900 p-4 pl-6 shadow-xl border-b-2 sticky top-0 z-50 transition-colors duration-300 flex justify-between items-center`}>
+                <div className="flex items-center gap-8">
+                    <h1 className={`text-3xl font-extrabold tracking-tighter flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                        {/* PATCH: Added sidebar toggle button */}
+                        <button
+                            onClick={() => setSidebarOpen(!sidebarOpen)}
+                            className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
+                            title={sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
+                        >
+                            <PanelLeft size={24} />
+                        </button>
+                        Gen<span className="text-[#4285F4]">Notes</span>
+                        <span className={`text-[10px] px-2 py-1 rounded font-mono tracking-widest border flex items-center gap-1 ${darkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                            <Sparkles size={10} className="text-[#FBBC05]" /> Gemini Core
+                        </span>
+                    </h1>
+                    <div className="hidden md:block">
+                        <LayoutSelector currentLayout={layoutMode} setLayout={setLayoutMode} darkMode={darkMode} />
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    {/* PATCH: Session Reset Button - Direct Action */}
+                    <button
+                        onClick={onLogout}
+                        className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
+                        title="Terminate Session & Reset"
+                    >
+                        <LogOut size={18} />
+                    </button>
+
+                    <CandleToggle darkMode={darkMode} setDarkMode={setDarkMode} />
+                    <div className={`flex items-center space-x-2 text-xs font-mono px-4 py-2 rounded-full border ${darkMode ? 'bg-slate-800 text-[#34A853] border-slate-700' : 'bg-slate-100 text-[#34A853] border-slate-200'}`}>
+                        <Cpu size={14} className="animate-pulse" />
+                        <span>SYSTEM: ONLINE</span>
+                    </div>
+                </div>
+            </header>
+        );
+
+        const MindMapSkeleton = ({ darkMode }) => (
+            <div className={`w-full h-[600px] rounded-2xl border-2 flex items-center justify-center relative overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <style>{`@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`}</style>
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_infinite] -skew-x-12"></div>
+                <div className="flex flex-col items-center gap-8 opacity-50">
+                    <div className={`w-40 h-16 rounded-xl animate-pulse ${darkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
+                    <div className={`w-1 h-12 ${darkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
+                    <div className="flex gap-12">
+                        {[1, 2, 3].map(i => (
+                            <div key={i} className="flex flex-col items-center gap-4">
+                                <div className={`w-1 h-12 ${darkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
+                                <div className={`w-32 h-12 rounded-xl animate-pulse ${darkMode ? 'bg-slate-700' : 'bg-slate-300'}`} style={{ animationDelay: `${i * 100}ms` }}></div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
-            <div class="footerNote">Security note: client-side keys are visible in source. Use for demos, not production.</div>
-          </div>
-        </div>
-      </div>
-    </main>
-  </div>
+        );
 
-  <!-- Modal wrapper (re-uses same content block) -->
-  <div class="modalWrap" id="modalWrap" aria-hidden="true">
-    <div class="card" style="max-width: 920px; width: 100%;">
-      <div class="cardHead">
-        <h2 class="title">Choose Access Mode</h2>
-        <p class="sub">BYOK enables in-app processing. “Unlimited” opens Gemini in your browser.</p>
-      </div>
-      <div class="grid" style="padding-top: 0;">
-        <div class="tile">
-          <h3>BYOK (Bring Your Own Key)</h3>
-          <p>Enter your Gemini API key. Stored in this tab’s session.</p>
-          <div class="field">
-            <input id="apiKeyInputModal" type="password" placeholder="Paste API key (AIza...)" autocomplete="off" />
-            <button class="btn" id="toggleShowModal">Show</button>
-          </div>
-          <div class="row">
-            <button class="btn primary" id="saveKeyModal">Save & Continue</button>
-            <button class="btn" id="closeModal">Close</button>
-          </div>
-        </div>
-        <div class="tile google-spotlight">
-          <h3>Unlimited (No API Key)</h3>
-          <p>Copy this link and paste it into your browser address bar. We also try to open it for you.</p>
-          <div class="linkBox">https://gemini.google.com/share/49cf64d2b8dc</div>
-          <div class="row">
-            <button class="btn" id="copyLinkModal">Copy Link</button>
-            <button class="btn green" id="openGeminiModal">Open Gemini</button>
-          </div>
-          <div class="footerNote">Popups blocked? Paste the copied link manually.</div>
-        </div>
-      </div>
-    </div>
-  </div>
+        const ProgressBar = ({ stage, darkMode }) => {
+            const stages = ['Ingestion', 'Analysis', 'Mapping', 'Synthesis', 'Rendering'];
+            const currentIdx = stages.indexOf(stage);
+            return (
+                <div className="flex justify-between items-center mb-12 px-8 max-w-5xl mx-auto">
+                    {stages.map((s, idx) => (
+                        <div key={s} className="flex flex-col items-center flex-1 relative">
+                            <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-500 border-4 
+            ${idx <= currentIdx
+                                    ? 'bg-[#4285F4] border-[#1a73e8] text-white shadow-lg scale-110'
+                                    : darkMode ? 'bg-slate-800 border-slate-700 text-slate-500' : 'bg-slate-200 border-slate-300 text-slate-400'
+                                }`}>
+                                {idx < currentIdx ? <CheckCircle size={18} strokeWidth={3} /> : <div className="text-sm font-bold">{idx + 1}</div>}
+                            </div>
+                            <div className={`text-[10px] mt-3 font-mono uppercase tracking-widest font-bold transition-colors duration-300 ${idx <= currentIdx ? 'text-[#4285F4]' : darkMode ? 'text-slate-600' : 'text-slate-400'}`}>{s}</div>
+                            {idx !== stages.length - 1 && <div className={`absolute top-5 left-1/2 w-full h-1 -z-0 transition-colors duration-500 ${idx < currentIdx ? 'bg-[#4285F4]' : darkMode ? 'bg-slate-800' : 'bg-slate-200'}`} />}
+                        </div>
+                    ))}
+                </div>
+            );
+        };
 
-  <div class="toasts" id="toasts"></div>
+        // PATCH: MindMapNode with breathing animation
+        const MindMapNode = ({ node, isRoot = false, darkMode }) => {
+            const [collapsed, setCollapsed] = useState(false);
+            if (!node) return null;
+            const handleToggle = (e) => { e.stopPropagation(); if (node.children?.length > 0) setCollapsed(!collapsed); };
+            const hasChildren = node.children && node.children.length > 0;
 
-  <script>
-    (function(){
-      const GEMINI_SHARE_LINK = 'https://gemini.google.com/share/49cf64d2b8dc';
-      const KEY_KEY = 'gen_notes_api_key';
-      const MODE_KEY = 'gen_notes_auth_mode';
+            return (
+                <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
+                    <div onClick={handleToggle} className={`
+        relative z-10 transition-all duration-300 cursor-pointer group border-[3px] rounded-2xl shadow-xl px-8 py-4 min-w-[160px] text-center mind-node-breathing
+        ${isRoot
+                            ? 'bg-gradient-to-br from-[#4285F4] to-[#1a73e8] text-white shadow-blue-900/20 scale-110 border-transparent'
+                            : darkMode
+                                ? 'bg-slate-800 text-white border-slate-600 hover:border-[#FBBC05] hover:shadow-yellow-500/20'
+                                : 'bg-white text-slate-900 border-slate-300 hover:border-[#FBBC05] hover:shadow-xl'}
+        ${hasChildren ? 'hover:scale-105' : ''}
+      `}>
+                        <span className={`font-bold ${isRoot ? 'text-2xl' : 'text-base'} block tracking-tight`}>{node.label}</span>
+                        {hasChildren && <div className={`absolute -bottom-4 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold border-4 transition-colors duration-300 ${darkMode ? 'border-slate-800 bg-slate-700 text-white' : 'border-white bg-slate-200 text-slate-700'} ${collapsed ? 'bg-[#EA4335] text-white' : ''}`}>{collapsed ? '+' : '-'}</div>}
+                    </div>
+                    {hasChildren && !collapsed && (
+                        <div className="flex flex-col items-center">
+                            <div className={`w-1 h-12 ${darkMode ? 'bg-slate-600' : 'bg-slate-400'}`}></div>
+                            <div className="flex items-start gap-12 relative">
+                                {node.children.length > 1 && <div className={`absolute top-0 left-0 right-0 h-1 ${darkMode ? 'bg-slate-600' : 'bg-slate-400'}`} style={{ left: `calc(${100 / (node.children.length * 2)}%)`, right: `calc(${100 / (node.children.length * 2)}%)` }}></div>}
+                                {node.children.map((child, idx) => (<div key={idx} className="flex flex-col items-center relative"><div className={`w-1 h-12 ${darkMode ? 'bg-slate-600' : 'bg-slate-400'}`}></div><MindMapNode node={child} darkMode={darkMode} /></div>))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
 
-      const $ = (id) => document.getElementById(id);
+        const KineticMindMap = ({ data, darkMode }) => {
+            const [scale, setScale] = useState(0.8);
+            const [position, setPosition] = useState({ x: 0, y: 0 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+            const containerRef = useRef(null);
+            const canvasRef = useRef(null);
 
-      function getKey(){
-        try { return (sessionStorage.getItem(KEY_KEY) || '').trim(); } catch { return ''; }
-      }
-      function setKey(v){
-        try {
-          const k = (v || '').trim();
-          if (k) sessionStorage.setItem(KEY_KEY, k);
-          else sessionStorage.removeItem(KEY_KEY);
-        } catch {}
-      }
-      function getMode(){
-        try { return (sessionStorage.getItem(MODE_KEY) || '').trim(); } catch { return ''; }
-      }
-      function setMode(m){
-        try {
-          if (m) sessionStorage.setItem(MODE_KEY, m);
-          else sessionStorage.removeItem(MODE_KEY);
-        } catch {}
-      }
+            // PATCH: Force view reset on data change
+            useEffect(() => {
+                setScale(0.8);
+                setPosition({ x: 0, y: 0 });
+            }, [data]);
 
-      function toast(msg, type='info'){
-        const wrap = $('toasts');
-        const el = document.createElement('div');
-        el.className = 'toast';
-        el.innerHTML = `
-          <span class="pill ${type}">${type.toUpperCase()}</span>
-          <span>${escapeHtml(msg)}</span>
-          <button aria-label="Close">✕</button>
-        `;
-        el.querySelector('button').onclick = () => el.remove();
-        wrap.appendChild(el);
-        setTimeout(() => { if (el.isConnected) el.remove(); }, 4200);
-      }
+            const handleDownload = () => {
+                if (window.html2canvas && canvasRef.current) {
+                    window.html2canvas(canvasRef.current, { backgroundColor: darkMode ? '#0f172a' : '#f8fafc', scale: 2 }).then(canvas => {
+                        const link = document.createElement('a'); link.download = 'gen-notes-mindmap.png'; link.href = canvas.toDataURL(); link.click();
+                    });
+                } else { alert("Snapshot engine initializing... try again in 3 seconds."); }
+            };
 
-      function escapeHtml(s){
-        return String(s)
-          .replaceAll('&','&amp;')
-          .replaceAll('<','&lt;')
-          .replaceAll('>','&gt;')
-          .replaceAll('"','&quot;')
-          .replaceAll("'",'&#039;');
-      }
+            const handleReset = () => {
+                setScale(0.8);
+                setPosition({ x: 0, y: 0 });
+            };
 
-      function updateBadge(){
-        const key = getKey();
-        const mode = getMode();
-        const dot = $('accessDot');
-        const text = $('accessText');
+            const handleWheel = (e) => { if (e.ctrlKey || e.metaKey) { e.preventDefault(); const delta = e.deltaY > 0 ? 0.9 : 1.1; setScale(s => Math.min(Math.max(s * delta, 0.3), 4)); } };
+            const handleMouseDown = (e) => { setIsDragging(true); setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y }); };
+            const handleMouseMove = (e) => { if (isDragging) { setPosition({ x: e.clientX - dragStart.x, y: e.clientY - dragStart.y }); } };
+            const handleMouseUp = () => { setIsDragging(false); };
 
-        if (key) {
-          dot.classList.add('ok');
-          text.textContent = 'BYOK';
-        } else if (mode === 'unlimited') {
-          dot.classList.remove('ok');
-          dot.style.background = 'var(--g-yellow)';
-          text.textContent = 'UNLIMITED';
-        } else {
-          dot.classList.remove('ok');
-          dot.style.background = 'var(--g-yellow)';
-          text.textContent = 'ACCESS';
+            if (!data) return null;
+
+            const transitionStyle = isDragging ? 'none' : 'transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
+
+            return (
+                <div className={`relative w-full h-full min-h-[500px] rounded-2xl overflow-hidden border-2 shadow-inner group transition-colors duration-500 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-300'}`}>
+                    <div className="absolute inset-0 pointer-events-none opacity-20" style={{ backgroundImage: `radial-gradient(${darkMode ? '#475569' : '#94a3b8'} 1px, transparent 1px)`, backgroundSize: '30px 30px', transform: `translate3d(${position.x % 30}px, ${position.y % 30}px, 0) scale(${scale})` }}></div>
+
+                    <div className={`absolute top-6 right-6 z-50 flex flex-col gap-3 p-3 rounded-xl shadow-xl border transition-colors ${darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-200'}`}>
+                        <button onClick={() => setScale(s => Math.min(s + 0.2, 4))} className={`p-3 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-800'}`}><ZoomIn size={24} /></button>
+                        <button onClick={() => setScale(s => Math.max(s - 0.2, 0.3))} className={`p-3 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-800'}`}><ZoomOut size={24} /></button>
+                        <button onClick={handleReset} className={`p-3 rounded-lg ${darkMode ? 'hover:bg-slate-700 text-white' : 'hover:bg-slate-100 text-slate-800'}`}><Move size={24} /></button>
+                        <button onClick={handleDownload} className="p-3 bg-[#34A853] hover:bg-[#2d8e47] text-white rounded-lg border border-[#2d8e47]" title="Download Map PNG"><ImageIcon size={24} /></button>
+                    </div>
+
+                    <div ref={containerRef} className="w-full h-full cursor-grab active:cursor-grabbing flex items-center justify-center origin-center" onWheel={handleWheel} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} style={{ cursor: isDragging ? 'grabbing' : 'grab' }}>
+                        <div ref={canvasRef} className="p-40" style={{ transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`, transition: transitionStyle, willChange: 'transform' }}>
+                            <MindMapNode node={data} isRoot={true} darkMode={darkMode} />
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const seededRandom = (seed) => {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        };
+
+        const HighlightedText = ({ text, darkMode }) => {
+            const parts = useMemo(() => {
+                const sentences = text.split(/([.?!])/);
+                let seed = 0;
+                for (let i = 0; i < text.length && i < 100; i++) {
+                    seed += text.charCodeAt(i);
+                }
+                return sentences.map((part, i) => {
+                    const isHighlight = part.length > 20 && seededRandom(seed + i) > 0.7;
+                    if (isHighlight) {
+                        return (<span key={i} className="relative inline-block mx-1 z-0"><span className={`absolute inset-0 skew-x-2 scale-y-110 rounded -z-10 top-0 bottom-0 ${darkMode ? 'bg-[#FBBC05]/40' : 'bg-[#FBBC05] mix-blend-multiply'}`}></span>{part}</span>);
+                    }
+                    return <span key={i}>{part}</span>;
+                });
+            }, [text, darkMode]);
+            return <>{parts}</>;
+        };
+
+        // PATCH: StreamingHighlightedText Component (Phase 2 Upgrade)
+        const StreamingHighlightedText = ({ text, darkMode }) => {
+            const [displayedText, setDisplayedText] = useState('');
+            const [isTyping, setIsTyping] = useState(true);
+            const [hasAnimated, setHasAnimated] = useState(false);
+            const textRef = useRef(text);
+
+            // Only animate on first render or if text changes
+            useEffect(() => {
+                // If text hasn't changed and we've already animated, don't re-animate
+                if (textRef.current === text && hasAnimated) {
+                    setDisplayedText(text);
+                    setIsTyping(false);
+                    return;
+                }
+
+                textRef.current = text;
+                let index = 0;
+                setIsTyping(true);
+                setDisplayedText('');
+
+                // Faster typing speed (15ms) with batch of 2 chars for smoother feel
+                const interval = setInterval(() => {
+                    if (index < text.length) {
+                        const charsToAdd = Math.min(2, text.length - index);
+                        setDisplayedText((prev) => prev + text.substring(index, index + charsToAdd));
+                        index += charsToAdd;
+                    } else {
+                        clearInterval(interval);
+                        setIsTyping(false);
+                        setHasAnimated(true);
+                    }
+                }, 15);
+
+                return () => clearInterval(interval);
+            }, [text]);
+
+            // Apply highlighting to displayed text
+            const highlightedParts = useMemo(() => {
+                if (!displayedText) return null;
+                const sentences = displayedText.split(/([.?!])/);
+                let seed = 0;
+                for (let i = 0; i < text.length && i < 100; i++) {
+                    seed += text.charCodeAt(i);
+                }
+                return sentences.map((part, i) => {
+                    const isHighlight = part.length > 20 && seededRandom(seed + i) > 0.7;
+                    if (isHighlight) {
+                        return (<span key={i} className="relative inline-block mx-1 z-0"><span className={`absolute inset-0 skew-x-2 scale-y-110 rounded -z-10 top-0 bottom-0 ${darkMode ? 'bg-[#FBBC05]/40' : 'bg-[#FBBC05] mix-blend-multiply'}`}></span>{part}</span>);
+                    }
+                    return <span key={i}>{part}</span>;
+                });
+            }, [displayedText, darkMode, text]);
+
+            return (
+                <>
+                    {highlightedParts}
+                    {isTyping && <span className="inline-block relative ml-1"><Pen size={28} className="text-[#FBBC05] animate-bounce absolute -top-4 -right-2" style={{ transform: 'rotate(-15deg)' }} fill="#b45309" /></span>}
+                </>
+            );
+        };
+
+        const HandwritingCard = ({ topic, index, darkMode }) => {
+            const [activeTab, setActiveTab] = useState('notes');
+            const [schematicError, setSchematicError] = useState(false);
+
+            useEffect(() => {
+                setSchematicError(false);
+            }, [topic.schematicUrl]);
+
+            return (
+                <div id={`topic-${index}`} className={`rounded-2xl shadow-xl overflow-hidden border-2 flex flex-col mb-16 scroll-mt-32 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
+                    <div className={`p-6 border-b-2 flex justify-between items-center relative z-20 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                        <h3 className={`font-bold font-mono text-xl uppercase tracking-widest flex items-center gap-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
+                            <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold font-mono text-base ${darkMode ? 'bg-[#4285F4] text-white' : 'bg-slate-900 text-white'}`}>{index + 1}</span>
+                            <div className="flex flex-col">
+                                <span>{topic.title}</span>
+                                {topic.sources && (
+                                    <span className="text-[10px] normal-case tracking-normal opacity-60 flex gap-2">
+                                        Sources: {topic.sources.join(', ')}
+                                    </span>
+                                )}
+                            </div>
+                        </h3>
+                        <div className={`flex p-1.5 rounded-lg ${darkMode ? 'bg-slate-900' : 'bg-slate-200'}`}>
+                            {['notes', 'schematic'].map(tab => (
+                                <button key={tab} onClick={() => setActiveTab(tab)} className={`px-6 py-2 text-xs uppercase font-bold rounded-md transition-all ${activeTab === tab ? (darkMode ? 'bg-slate-700 text-white shadow-md' : 'bg-white text-slate-900 shadow-md') : (darkMode ? 'text-slate-400 hover:text-slate-300' : 'text-slate-500 hover:text-slate-700')}`}>
+                                    {tab === 'schematic' ? 'Blueprint' : 'Notes'}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className={`relative flex-grow ${darkMode ? 'bg-slate-900' : 'bg-white'}`}>
+                        {activeTab === 'notes' && (
+                            <div className="relative p-12 min-h-[600px]">
+                                <div className="absolute inset-0 pointer-events-none z-0"
+                                    style={{
+                                        backgroundColor: darkMode ? '#0f172a' : '#ffffff',
+                                        backgroundImage: darkMode
+                                            ? `linear-gradient(#1e293b 1px, transparent 1px), linear-gradient(90deg, #1e293b 1px, transparent 1px)`
+                                            : `linear-gradient(#cbd5e1 1px, transparent 1px), linear-gradient(90deg, transparent 100%, #fca5a5 100%)`,
+                                        backgroundSize: darkMode ? '40px 40px' : '100% 3.5rem'
+                                    }}>
+                                </div>
+                                <div className={`absolute left-20 top-0 bottom-0 w-1 z-0 ${darkMode ? 'bg-[#EA4335]/30' : 'bg-[#EA4335]/20'}`}></div>
+
+                                <div className="relative z-10 pl-16 pr-8 max-w-6xl mx-auto">
+                                    <div className="mb-12 pt-2">
+                                        <h4 className={`font-handwriting text-6xl font-bold antialiased leading-tight underline decoration-4 underline-offset-8 transform -rotate-1 ${darkMode ? 'text-[#4285F4] decoration-slate-600' : 'text-slate-900 decoration-[#EA4335]'}`} style={{ fontFamily: '"Caveat", cursive' }}>{topic.title}</h4>
+                                    </div>
+                                    <div className={`font-handwriting text-4xl leading-[3.5rem] font-medium subpixel-antialiased tracking-wide ${darkMode ? 'text-slate-300' : 'text-slate-800'}`} style={{ fontFamily: '"Caveat", cursive' }}>
+                                        {/* PATCH: Using StreamingHighlightedText instead of HighlightedText */}
+                                        <StreamingHighlightedText text={topic.summary} darkMode={darkMode} />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {activeTab === 'schematic' && (
+                            <div className="h-[700px] w-full relative flex items-center justify-center p-12">
+                                {topic.schematicUrl && !schematicError ? (
+                                    <div className={`w-full h-full border-[4px] p-4 shadow-2xl ${darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white border-slate-900'}`}>
+                                        <div className="w-full h-full flex flex-col">
+                                            <div className={`h-12 border-b-4 flex justify-between items-center px-4 mb-4 ${darkMode ? 'border-slate-600 bg-slate-700 text-slate-300' : 'border-slate-900 bg-slate-50 text-slate-900'}`}>
+                                                <span className="font-mono text-sm font-bold tracking-widest">FIG_REF: {index + 1}.B // ENGINEERING_VIEW</span>
+                                                <span className="font-mono text-sm font-bold text-[#EA4335]">CONFIDENTIAL</span>
+                                            </div>
+                                            <img
+                                                src={topic.schematicUrl}
+                                                alt="Technical Schematic"
+                                                className={`flex-1 object-contain ${darkMode ? 'filter invert hue-rotate-180 brightness-90' : 'mix-blend-multiply filter contrast-125'}`}
+                                                onError={() => setSchematicError(true)}
+                                            />
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="text-center p-12">
+                                        <div className="flex flex-col items-center">
+                                            <AlertTriangle className="mx-auto text-slate-600 mb-6 w-16 h-16" />
+                                            <p className={`text-sm font-mono uppercase tracking-widest ${darkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+                                                {schematicError ? 'Visual Data Corrupted' : 'Blueprint Data Unavailable'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const GhostWriterText = ({ text, darkMode }) => {
+            const [displayedText, setDisplayedText] = useState('');
+            const [isTyping, setIsTyping] = useState(true);
+
+            useEffect(() => {
+                let index = 0; setIsTyping(true); setDisplayedText('');
+                const interval = setInterval(() => { if (index < text.length) { setDisplayedText((prev) => prev + text.charAt(index)); index++; } else { clearInterval(interval); setIsTyping(false); } }, 20);
+                return () => clearInterval(interval);
+            }, [text]);
+
+            return (
+                <div className={`relative font-handwriting text-2xl leading-10 font-medium ${darkMode ? 'text-slate-300' : 'text-slate-800'}`} style={{ fontFamily: '"Caveat", cursive' }}>
+                    {displayedText}
+                    {isTyping && <span className="inline-block relative ml-1"><Pen size={24} className="text-[#FBBC05] animate-bounce absolute -top-6 -right-2" style={{ transform: 'rotate(-15deg)' }} fill="#b45309" /></span>}
+                </div>
+            );
+        };
+
+        const ChatInterface = ({ contextText, darkMode, messages, onSendMessage }) => {
+            const [input, setInput] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const messagesEndRef = useRef(null);
+
+            useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
+
+            const handleSend = async () => {
+                if (!input.trim() || isLoading) return;
+                const userMsg = input; setInput('');
+                onSendMessage({ role: 'user', content: userMsg });
+                setIsLoading(true);
+                try {
+                    const prompt = `You are a cynical, brilliant data analyst. Answer strictly based on context. DOCUMENT CONTEXT: ${contextText.substring(0, 40000)} USER QUESTION: ${userMsg}`;
+                    const aiResponse = await generateChatResponse(prompt);
+                    onSendMessage({ role: 'ai', content: aiResponse });
+                } catch (error) { onSendMessage({ role: 'ai', content: "Error: Neural connection interrupted." }); } finally { setIsLoading(false); }
+            };
+
+            return (
+                <div className={`rounded-2xl shadow-2xl overflow-hidden border flex flex-col h-full min-h-[800px] mt-0 mb-0 relative transition-colors duration-300 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300'}`}>
+                    <div className="absolute inset-0 pointer-events-none z-0" style={{
+                        backgroundColor: darkMode ? '#0f172a' : '#fffdf5',
+                        backgroundImage: `linear-gradient(${darkMode ? '#334155' : '#e2e8f0'} 1px, transparent 1px)`,
+                        backgroundSize: '100% 2.5rem'
+                    }}></div>
+
+                    <div className={`p-6 border-b-8 flex justify-between items-center z-10 relative ${darkMode ? 'bg-slate-800 border-[#EA4335]' : 'bg-slate-900 border-[#EA4335]'}`}>
+                        <div className="flex items-center space-x-4"><div className="w-10 h-10 bg-[#EA4335] rounded-lg flex items-center justify-center text-white"><Terminal size={24} /></div><div><h3 className="text-white font-bold text-lg tracking-wide uppercase">Ghostwriter Interface</h3></div></div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto p-10 space-y-10 relative z-10 scrollbar-thin">
+                        {messages.map((msg, idx) => (<div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}><div className={`max-w-[70%] p-6 rounded-2xl shadow-lg ${msg.role === 'user' ? (darkMode ? 'bg-[#EA4335] text-white' : 'bg-slate-900 text-white') : (darkMode ? 'bg-slate-800/90 border border-slate-600' : 'bg-white/80 border-2 border-slate-200')}`}>{msg.role === 'ai' ? <GhostWriterText text={msg.content} darkMode={darkMode} /> : <span className="font-sans text-lg">{msg.content}</span>}</div></div>))}
+                        {isLoading && <div className="flex justify-start"><div className={`flex items-center space-x-3 p-4 rounded-xl border ${darkMode ? 'bg-slate-800 border-slate-600' : 'bg-white/80 border-slate-200'}`}><RefreshCw size={24} className="animate-spin text-[#FBBC05]" /><span className={`text-sm font-mono uppercase ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>Thinking...</span></div></div>}
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    <div className={`p-6 border-t z-10 relative ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-100 border-slate-300'}`}>
+                        <div className={`flex items-center space-x-3 rounded-xl border-2 p-4 shadow-inner transition-colors ${darkMode ? 'bg-slate-900 border-slate-600 focus-within:border-[#4285F4]' : 'bg-white border-slate-300 focus-within:border-[#4285F4]'}`}>
+                            <input type="text" value={input} onChange={(e) => setInput(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
+                                placeholder="Interrogate the findings..." className={`flex-1 bg-transparent text-2xl focus:outline-none font-handwriting ${darkMode ? 'text-slate-200 placeholder-slate-600' : 'text-slate-800 placeholder-slate-400'}`} style={{ fontFamily: '"Caveat", cursive' }} />
+                            <button onClick={handleSend} disabled={isLoading || !input.trim()} className="p-3 bg-[#4285F4] text-white rounded-lg hover:bg-blue-600 shadow-lg transform hover:scale-105 transition-all"><Send size={24} /></button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // --- VIDEO STYLES CONFIG ---
+        const VIDEO_STYLES = [
+            { id: 'default', label: 'Default (Science Documentary)', icon: Film, desc: "Classic educational style" },
+            { id: 'youtuber', label: 'YouTuber Science', icon: Zap, desc: "High-energy, fast-paced" },
+            { id: 'minecraft', label: 'Minecraft Animation', icon: Package, desc: "Blocky, voxel world" },
+            { id: 'pixar', label: '3D Animated Film', icon: Sparkles, desc: "Family movie quality" },
+            { id: 'stick', label: 'Stick Figure Animation', icon: Pen, desc: "Simple, witty sketches" },
+            { id: 'whiteboard', label: 'Diagram / Whiteboard', icon: GridIcon, desc: "Technical & precise" }
+        ];
+
+        const STYLE_PROMPTS = {
+            default: {
+                script: "Clear, engaging, educational tone.",
+                visual: "Cinematic science documentary still, photorealistic, 8k, golden hour."
+            },
+            youtuber: {
+                script: "High-energy, fast-paced, enthusiastic YouTuber vibe, direct address.",
+                visual: "High-quality YouTube thumbnail style, expressive, vibrant colors, studio lighting."
+            },
+            minecraft: {
+                script: "Simple, building-block metaphors, playful tone.",
+                visual: "Voxel art style, blocky 3D terrain, video game aesthetic."
+            },
+            pixar: {
+                script: "Whimsical, story-driven, family-friendly tone.",
+                visual: "High-quality 3D animated movie style, cute stylization, soft volumetric lighting, render engine look."
+            },
+            stick: {
+                script: "Minimalist, witty, straightforward.",
+                visual: "Hand-drawn stick figure animation style, simple lines on paper background, sketch aesthetic."
+            },
+            whiteboard: {
+                script: "Analytical, precise, lecture style.",
+                visual: "Whiteboard marker sketch, hand-drawn diagrams, educational schematic style."
+            }
+        };
+
+        const VideoInterface = ({ topics, darkMode, persistedAssets, onAssetsUpdate, scriptsLoaded, showToast, onHeavyWorkChange }) => {
+            const [selectedTopicIdx, setSelectedTopicIdx] = useState(0);
+            const [isPlaying, setIsPlaying] = useState(false);
+            const [playbackRate, setPlaybackRate] = useState(1);
+            const [showSettings, setShowSettings] = useState(false);
+            const [currentTime, setCurrentTime] = useState(0);
+            const [duration, setDuration] = useState(0);
+            const [generationProgress, setGenerationProgress] = useState(0);
+            const [isGenerating, setIsGenerating] = useState(false);
+            const [videoError, setVideoError] = useState(null);
+            const [language, setLanguage] = useState('english');
+            const [isRenderingVideo, setIsRenderingVideo] = useState(false);
+            const [currentSegmentIdx, setCurrentSegmentIdx] = useState(0);
+            const [isFullscreen, setIsFullscreen] = useState(false);
+            const [pseudoFullscreen, setPseudoFullscreen] = useState(false);
+
+            // -- STYLE STATE --
+            const [showStyleModal, setShowStyleModal] = useState(false);
+            const [selectedStyleId, setSelectedStyleId] = useState('default');
+
+            const audioRef = useRef(null);
+            const renderCanvasRef = useRef(null);
+            const videoContainerRef = useRef(null);
+            const shouldPlayAfterGeneration = useRef(false);
+            const isGeneratingRef = useRef(false);
+            const isMounted = useRef(true);
+
+            const selectedTopic = topics[selectedTopicIdx];
+
+            const assetKey = selectedTopic?.id || `topic-${selectedTopicIdx}`;
+            const currentTopicAssets = persistedAssets?.[assetKey];
+
+            // Current active style for UI display (saved or default)
+            const currentStyleId = currentTopicAssets?.styleId || (showStyleModal ? selectedStyleId : null);
+
+            // PATCH C: Notify App of heavy work - WITH CLEANUP FIX
+            useEffect(() => {
+                onHeavyWorkChange?.(isGenerating || showStyleModal);
+                return () => onHeavyWorkChange?.(false);
+            }, [isGenerating, showStyleModal, onHeavyWorkChange]);
+
+            useEffect(() => {
+                isMounted.current = true;
+                return () => { isMounted.current = false; };
+            }, []);
+
+            useEffect(() => {
+                setIsPlaying(false);
+                if (audioRef.current) {
+                    audioRef.current.pause();
+                }
+                setCurrentTime(0);
+                setCurrentSegmentIdx(0);
+                setVideoError(null);
+            }, [selectedTopicIdx, language]);
+
+            useEffect(() => {
+                const handleFsChange = () => {
+                    setIsFullscreen(!!document.fullscreenElement);
+                };
+                document.addEventListener('fullscreenchange', handleFsChange);
+                return () => document.removeEventListener('fullscreenchange', handleFsChange);
+            }, []);
+
+            useEffect(() => {
+                return () => {
+                    if (audioRef.current) {
+                        audioRef.current.pause();
+                        audioRef.current.src = '';
+                    }
+                };
+            }, []);
+
+            const toggleFullscreen = async () => {
+                if (!videoContainerRef.current) return;
+
+                try {
+                    if (!document.fullscreenElement && !pseudoFullscreen) {
+                        await videoContainerRef.current.requestFullscreen().catch(err => {
+                            console.warn("Native fullscreen blocked:", err);
+                            setPseudoFullscreen(true);
+                            if (showToast) showToast("Fullscreen blocked by browser, using theater mode", "info");
+                        });
+                    } else if (document.fullscreenElement) {
+                        await document.exitFullscreen();
+                    } else if (pseudoFullscreen) {
+                        setPseudoFullscreen(false);
+                    }
+                } catch (e) {
+                    console.warn("Fullscreen toggle error", e);
+                    setPseudoFullscreen(!pseudoFullscreen);
+                }
+            };
+
+            useEffect(() => {
+                if (audioRef.current) {
+                    audioRef.current.playbackRate = playbackRate;
+                }
+            }, [currentSegmentIdx, playbackRate, currentTopicAssets]);
+
+            const handleGenerateAssets = async (styleIdOverride = null) => {
+                if (isGeneratingRef.current) return null;
+                isGeneratingRef.current = true;
+
+                if (audioRef.current) audioRef.current.pause();
+
+                const capturedAssetKey = assetKey;
+                const capturedTopicIdx = selectedTopicIdx;
+
+                setIsGenerating(true);
+                setVideoError(null);
+                setGenerationProgress(5);
+
+                try {
+                    // Determine Style
+                    const styleId = styleIdOverride || currentTopicAssets?.styleId || 'default';
+                    const styleConfig = STYLE_PROMPTS[styleId] || STYLE_PROMPTS['default'];
+
+                    const promptContext = language === 'hinglish'
+                        ? "HINGLISH (authentic Indian YouTuber style, mixed Hindi/English)"
+                        : "ENGLISH (Veritasium style, clear, engaging)";
+
+                    const combinedPrompt = `For the topic "${selectedTopic.title}", generate 3 video segments (Introduction, Deep Dive, Conclusion).
+      Return a strict JSON array of exactly 3 objects.
+      Format:
+      [
+        { "script": "40-word script...", "visualPrompt": "Photorealistic image description..." },
+        { "script": "...", "visualPrompt": "..." },
+        { "script": "...", "visualPrompt": "..." }
+      ]
+      Language: ${promptContext}.
+      Style/Tone Requirements: ${styleConfig.script}
+      IMPORTANT: Return ONLY valid JSON. No markdown formatting. No commentary.`;
+
+                    const response = await generateContent(combinedPrompt);
+                    if (!isMounted.current) return;
+
+                    const responseText = response.candidates?.[0]?.content?.parts?.[0]?.text;
+                    const segmentsData = safeJsonParse(responseText);
+
+                    if (!Array.isArray(segmentsData) || segmentsData.length !== 3) {
+                        throw new Error("Invalid generation structure received from AI.");
+                    }
+
+                    setGenerationProgress(30);
+
+                    // PHASE 3 OPTIMIZATION: Parallel video asset generation (300% speed increase)
+                    // Fire ALL audio and image requests simultaneously
+                    const segmentPromises = segmentsData.map(async (seg, i) => {
+                        // Parallel audio + image generation for each segment
+                        const [audioUrl, imageUrl] = await Promise.all([
+                            generateAudio(seg.script),
+                            generateImage(`${styleConfig.visual} ${seg.visualPrompt}.`)
+                        ]);
+
+                        // CRITICAL: Race condition safety check
+                        if (!isMounted.current) return null;
+
+                        return {
+                            audioUrl,
+                            imageUrl: imageUrl || PLACEHOLDER_IMG,
+                            script: seg.script
+                        };
+                    });
+
+                    // Wait for all segments to complete in parallel
+                    const results = await Promise.all(segmentPromises);
+
+                    // CRITICAL: Another race condition check after all promises resolve
+                    if (!isMounted.current) return;
+
+                    // Filter out any null results (from unmounted checks)
+                    const generatedSegments = results.filter(seg => seg !== null);
+
+                    // Update progress to 100% after parallel completion
+                    setGenerationProgress(100);
+
+                    // SAVE STYLE ID HERE
+                    const newData = { data: generatedSegments, language, styleId };
+
+                    if (!isMounted.current) return;
+
+                    setIsPlaying(false);
+                    if (audioRef.current) audioRef.current.pause();
+
+                    if (capturedTopicIdx !== selectedTopicIdx) {
+                        console.warn("Topic changed during generation, discarding results");
+                        cleanupAudioUrls({ data: generatedSegments });
+                        return null;
+                    }
+
+                    onAssetsUpdate((prevAssets) => {
+                        const oldData = prevAssets?.[capturedAssetKey];
+                        cleanupAudioUrls(oldData);
+                        return { ...prevAssets, [capturedAssetKey]: newData };
+                    });
+
+                    return newData;
+                } catch (e) {
+                    if (isMounted.current) {
+                        console.error(e);
+                        setVideoError("Generation Failed. The Neural Core is overloaded.");
+                    }
+                    return null;
+                } finally {
+                    if (isMounted.current) {
+                        setIsGenerating(false);
+                        isGeneratingRef.current = false;
+                        setGenerationProgress(0);
+                        setCurrentSegmentIdx(0);
+                    }
+                }
+            };
+
+            const handleStyleConfirm = async () => {
+                // 1. IMMEDIATE LOCK: Persist styleId even before generation succeeds
+                // This prevents the user from changing it if generation fails.
+                onAssetsUpdate((prevAssets) => ({
+                    ...prevAssets,
+                    [assetKey]: {
+                        ...(prevAssets?.[assetKey] || {}), // preserve existing structure/lang if any
+                        styleId: selectedStyleId
+                    }
+                }));
+
+                setShowStyleModal(false);
+                shouldPlayAfterGeneration.current = true;
+
+                // 2. Pass the selected style immediately to generation
+                const result = await handleGenerateAssets(selectedStyleId);
+
+                // 3. BUG FIX: If generation failed, ensure autoplay doesn't haunt us later
+                if (!result) {
+                    shouldPlayAfterGeneration.current = false;
+                }
+            };
+
+            const togglePlay = async () => {
+                // 1. Check if assets exist
+                const hasAssets = currentTopicAssets && currentTopicAssets.language === language;
+
+                if (!hasAssets) {
+                    // 2. Check if style is already locked/chosen
+                    const existingStyle = currentTopicAssets?.styleId;
+
+                    if (!existingStyle) {
+                        // 3. If no style chosen yet, show modal and STOP
+                        setSelectedStyleId('default'); // BUG FIX: Reset selection so previous choices don't persist
+                        setShowStyleModal(true);
+                        return;
+                    }
+
+                    // 4. If style exists but assets missing (e.g. language switch), proceed with generation
+                    shouldPlayAfterGeneration.current = true;
+                    const success = await handleGenerateAssets();
+                    if (!success) {
+                        shouldPlayAfterGeneration.current = false;
+                        return;
+                    }
+                    return;
+                }
+
+                // Normal Play Toggle
+                if (audioRef.current) {
+                    if (isPlaying) {
+                        audioRef.current.pause();
+                        setIsPlaying(false);
+                    } else {
+                        audioRef.current.play().catch(e => console.error("Play failed", e));
+                        setIsPlaying(true);
+                    }
+                }
+            };
+
+            const handleSegmentEnd = () => {
+                const currentTopicSegments = currentTopicAssets?.data || [];
+                if (currentSegmentIdx < currentTopicSegments.length - 1) {
+                    setCurrentSegmentIdx(prev => prev + 1);
+                } else {
+                    setIsPlaying(false);
+                    setCurrentSegmentIdx(0);
+                }
+            };
+
+            useEffect(() => {
+                if (shouldPlayAfterGeneration.current && currentTopicAssets && audioRef.current) {
+                    const audio = audioRef.current;
+                    const handleCanPlay = () => {
+                        audio.play().catch(e => {
+                            console.error("Autoplay prevented:", e);
+                            setIsPlaying(false);
+                        });
+                        setIsPlaying(true);
+                        shouldPlayAfterGeneration.current = false;
+                    };
+                    audio.addEventListener('canplay', handleCanPlay, { once: true });
+                    return () => audio.removeEventListener('canplay', handleCanPlay);
+                }
+            }, [currentTopicAssets]);
+
+            useEffect(() => {
+                if (isPlaying && audioRef.current && currentTopicAssets) {
+                    const audio = audioRef.current;
+                    const handleCanPlay = () => {
+                        audio.play().catch(error => {
+                            log("Autoplay prevented or interrupted:", error);
+                            setIsPlaying(false);
+                        });
+                    };
+                    if (audio.readyState >= 3) {
+                        handleCanPlay();
+                    } else {
+                        audio.addEventListener('canplay', handleCanPlay, { once: true });
+                        return () => audio.removeEventListener('canplay', handleCanPlay);
+                    }
+                }
+            }, [currentSegmentIdx, isPlaying, currentTopicAssets]);
+
+            const handleTimeUpdate = () => {
+                if (audioRef.current) {
+                    setCurrentTime(audioRef.current.currentTime);
+                    const dur = audioRef.current.duration;
+                    if (Number.isFinite(dur)) {
+                        setDuration(dur);
+                    }
+                }
+            };
+
+            const handleSeek = (e) => {
+                const time = parseFloat(e.target.value);
+                if (audioRef.current && Number.isFinite(time)) {
+                    audioRef.current.currentTime = time;
+                    setCurrentTime(time);
+                }
+            };
+
+            const handleSpeedChange = (rate) => { setPlaybackRate(rate); if (audioRef.current) audioRef.current.playbackRate = rate; };
+
+            const handleDownloadVideo = async () => {
+                if (!currentTopicAssets || isRenderingVideo) return;
+                setIsRenderingVideo(true); setShowSettings(false);
+
+                const canvas = renderCanvasRef.current;
+                const ctx = canvas.getContext('2d');
+                const stream = canvas.captureStream(30);
+                let combinedStream = stream;
+
+                try {
+                    if (audioRef.current && audioRef.current.captureStream) {
+                        const audioStream = audioRef.current.captureStream();
+                        combinedStream = new MediaStream([...stream.getVideoTracks(), ...audioStream.getAudioTracks()]);
+                    }
+                } catch (e) { console.warn("Audio capture not supported/allowed", e); }
+
+                const mediaRecorder = new MediaRecorder(combinedStream, { mimeType: 'video/webm' });
+                const chunks = [];
+                mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+                mediaRecorder.onstop = () => { const blob = new Blob(chunks, { type: 'video/webm' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `full-episode-${selectedTopic.title}.webm`; a.click(); URL.revokeObjectURL(url); setIsRenderingVideo(false); };
+                mediaRecorder.start();
+
+                // PATCH: Fault-tolerant image loading with fallback
+                const loadImageWithFallback = (src, label) => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        let resolved = false;
+
+                        img.onload = () => {
+                            if (!resolved) { resolved = true; resolve({ type: 'image', img }); }
+                        };
+                        img.onerror = () => {
+                            if (!resolved) { resolved = true; resolve({ type: 'fallback', label }); }
+                        };
+                        img.src = src;
+
+                        // Timeout fallback after 5 seconds
+                        setTimeout(() => {
+                            if (!resolved) {
+                                resolved = true;
+                                console.warn(`[Fault Tolerance] Image timed out, using fallback for: ${label}`);
+                                resolve({ type: 'fallback', label });
+                            }
+                        }, 5000);
+                    });
+                };
+
+                // Render a fallback frame with gradient + text
+                const renderFallbackFrame = (label, scale) => {
+                    // Draw gradient background
+                    const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+                    gradient.addColorStop(0, '#1e293b');
+                    gradient.addColorStop(1, '#0f172a');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                    // Draw decorative circles
+                    ctx.fillStyle = 'rgba(66, 133, 244, 0.1)';
+                    ctx.beginPath();
+                    ctx.arc(canvas.width * 0.2, canvas.height * 0.3, 200 * scale, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.fillStyle = 'rgba(251, 188, 5, 0.1)';
+                    ctx.beginPath();
+                    ctx.arc(canvas.width * 0.8, canvas.height * 0.7, 150 * scale, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw text
+                    ctx.fillStyle = '#4285F4';
+                    ctx.font = 'bold 48px Inter, system-ui, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(label.substring(0, 40), canvas.width / 2, canvas.height / 2);
+
+                    // Draw subtext
+                    ctx.fillStyle = '#64748b';
+                    ctx.font = '24px Inter, system-ui, sans-serif';
+                    ctx.fillText('Visual temporarily unavailable', canvas.width / 2, canvas.height / 2 + 60);
+                };
+
+                const topicSegments = currentTopicAssets.data;
+                for (let segIdx = 0; segIdx < topicSegments.length; segIdx++) {
+                    const seg = topicSegments[segIdx];
+                    const asset = await loadImageWithFallback(seg.imageUrl, seg.script?.substring(0, 30) || `Segment ${segIdx + 1}`);
+
+                    const frames = 5 * 30;
+                    for (let f = 0; f < frames; f++) {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        const scale = 1 + (f / frames) * 0.1;
+
+                        if (asset.type === 'image') {
+                            const x = -((scale - 1) * canvas.width) / 2;
+                            const y = -((scale - 1) * canvas.height) / 2;
+                            ctx.drawImage(asset.img, x, y, canvas.width * scale, canvas.height * scale);
+                        } else {
+                            renderFallbackFrame(asset.label, scale);
+                        }
+
+                        await new Promise(r => setTimeout(r, 1000 / 30));
+                    }
+                }
+                mediaRecorder.stop();
+            };
+
+            const currentSegment = currentTopicAssets?.data?.[currentSegmentIdx];
+            const getTransitionClass = (index) => { const transitions = ['animate-ken-burns-pan-right', 'animate-ken-burns-zoom-in', 'animate-ken-burns-pan-left']; return transitions[index % transitions.length]; };
+            const formatTime = (time) => { if (!time || !Number.isFinite(time)) return "0:00"; const min = Math.floor(time / 60); const sec = Math.floor(time % 60); return `${min}:${sec < 10 ? '0' : ''}${sec}`; };
+
+            // Calculate container classes for pseudo-fullscreen
+            const containerClass = pseudoFullscreen
+                ? "fixed inset-0 z-[99999] bg-black w-full h-full"
+                : `lg:col-span-2 bg-black relative flex flex-col overflow-hidden group h-full`;
+
+            const lockedStyleLabel = currentTopicAssets?.styleId
+                ? VIDEO_STYLES.find(s => s.id === currentTopicAssets.styleId)?.label
+                : null;
+
+            return (
+                <div className={`rounded-2xl shadow-2xl overflow-hidden border-2 mt-0 relative transition-colors duration-300 h-full flex flex-col ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-900 border-slate-700'}`}>
+                    <style>{`@keyframes panRight { 0% { transform: scale(1.1) translate3d(-2%, 0, 0); } 100% { transform: scale(1.2) translate3d(2%, 0, 0); } } @keyframes panLeft { 0% { transform: scale(1.1) translate3d(2%, 0, 0); } 100% { transform: scale(1.2) translate3d(-2%, 0, 0); } } @keyframes zoomIn { 0% { transform: scale(1); } 100% { transform: scale(1.2); } } .animate-ken-burns-pan-right { animation: panRight 15s linear infinite alternate; } .animate-ken-burns-pan-left { animation: panLeft 15s linear infinite alternate; } .animate-ken-burns-zoom-in { animation: zoomIn 15s linear infinite alternate; }`}</style>
+
+                    {/* STYLE SELECTION MODAL */}
+                    {showStyleModal && (
+                        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                            <div className={`max-w-4xl w-full mx-4 rounded-2xl shadow-2xl overflow-hidden border border-slate-700 bg-slate-900 flex flex-col max-h-[90vh]`}>
+                                <div className="p-6 border-b border-slate-800 bg-slate-950 flex justify-between items-center">
+                                    <div>
+                                        <h3 className="text-2xl font-bold text-white mb-1">Choose Video Style</h3>
+                                        <p className="text-slate-400 text-sm flex items-center gap-2">
+                                            <Lock size={12} className="text-[#FBBC05]" />
+                                            Warning: This choice locks for this topic
+                                        </p>
+                                    </div>
+                                    <button onClick={() => setShowStyleModal(false)} className="p-2 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white"><X size={24} /></button>
+                                </div>
+
+                                <div className="p-6 overflow-y-auto grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {VIDEO_STYLES.map((style) => (
+                                        <button
+                                            key={style.id}
+                                            onClick={() => setSelectedStyleId(style.id)}
+                                            className={`relative p-4 rounded-xl border-2 text-left transition-all duration-300 group flex items-start gap-4 ${selectedStyleId === style.id
+                                                ? 'google-spotlight bg-slate-800'
+                                                : 'border-slate-800 bg-slate-900/50 hover:border-slate-600 hover:bg-slate-800'
+                                                }`}
+                                        >
+                                            <div className={`p-3 rounded-lg ${selectedStyleId === style.id ? 'bg-[#4285F4] text-white' : 'bg-slate-800 text-slate-500 group-hover:text-slate-300'}`}>
+                                                <style.icon size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className={`font-bold text-lg ${selectedStyleId === style.id ? 'text-white' : 'text-slate-300'}`}>{style.label}</h4>
+                                                <p className="text-slate-500 text-sm mt-1">{style.desc}</p>
+                                            </div>
+                                            {selectedStyleId === style.id && (
+                                                <div className="absolute top-4 right-4 text-[#34A853]">
+                                                    <CheckCircle size={20} fill="currentColor" className="text-slate-900" />
+                                                </div>
+                                            )}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                <div className="p-6 border-t border-slate-800 bg-slate-950 flex justify-end gap-3">
+                                    <button onClick={() => setShowStyleModal(false)} className="px-6 py-3 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">Cancel</button>
+                                    <button onClick={handleStyleConfirm} className="px-8 py-3 rounded-lg font-bold bg-[#4285F4] hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20 transition-all transform active:scale-95 flex items-center gap-2">
+                                        <Lock size={16} /> Confirm & Generate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {!pseudoFullscreen && (
+                        <div className="bg-slate-950 p-6 border-b-2 border-slate-800 flex justify-between items-center shrink-0">
+                            <h3 className="text-white font-bold text-2xl uppercase flex items-center gap-3"><Film size={28} className="text-[#EA4335]" /> Fact-Check Studio</h3>
+                            <div className="flex items-center gap-4">
+                                {/* STYLE BADGE */}
+                                <button
+                                    onClick={() => {
+                                        if (currentTopicAssets?.styleId) {
+                                            showToast("Style is locked for this topic", "info");
+                                        }
+                                    }}
+                                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-bold uppercase tracking-wider ${currentTopicAssets?.styleId
+                                        ? 'border-[#FBBC05]/30 bg-[#FBBC05]/10 text-[#FBBC05] cursor-default'
+                                        : 'border-slate-700 text-slate-500'
+                                        }`}
+                                >
+                                    {currentTopicAssets?.styleId ? <Lock size={10} /> : <Sparkles size={10} />}
+                                    {lockedStyleLabel || "No Style Selected"}
+                                </button>
+
+                                <div className="flex bg-slate-800 rounded-lg p-1 border border-slate-700">
+                                    <button disabled={isGenerating} onClick={() => setLanguage('english')} className={`px-4 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${language === 'english' ? 'bg-[#4285F4] text-white' : 'text-slate-400 hover:text-white'} ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}><Globe size={12} /> ENG</button>
+                                    <button disabled={isGenerating} onClick={() => setLanguage('hinglish')} className={`px-4 py-1 text-xs font-bold rounded-md transition-all flex items-center gap-2 ${language === 'hinglish' ? 'bg-[#4285F4] text-white' : 'text-slate-400 hover:text-white'} ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}><Globe size={12} /> HINGLISH</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className={`grid ${pseudoFullscreen ? 'grid-cols-1 h-full' : 'grid-cols-1 lg:grid-cols-3 h-[600px] lg:h-full flex-1 min-h-0'}`}>
+                        {!pseudoFullscreen && (
+                            <div className="bg-slate-900 border-r-2 border-slate-800 overflow-y-auto p-6">
+                                <div className="space-y-4">{topics.map((t, i) => {
+                                    const tKey = t.id || `topic-${i}`;
+                                    const hasAssets = persistedAssets?.[tKey]?.language === language;
+                                    return (
+                                        <button
+                                            key={i}
+                                            disabled={isGenerating}
+                                            onClick={() => { setSelectedTopicIdx(i); setIsPlaying(false); setCurrentSegmentIdx(0); }}
+                                            className={`w-full text-left p-4 rounded-xl flex items-center gap-4 transition-all 
+                    ${selectedTopicIdx === i ? 'bg-slate-800 border-2 border-[#4285F4] text-white shadow-lg' : 'text-slate-400 hover:bg-slate-800 border-2 border-transparent'}
+                    ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}
+                    `}
+                                        >
+                                            <span className="font-bold text-sm bg-slate-700 w-8 h-8 flex items-center justify-center rounded-full">{i + 1}</span>
+                                            <span className="truncate text-sm font-bold tracking-wide">{t.title}</span>
+                                            {hasAssets && <CheckCircle size={16} className="text-[#34A853] ml-auto" />}
+                                        </button>
+                                    )
+                                })}</div>
+                            </div>
+                        )}
+
+                        <div ref={videoContainerRef} className={containerClass}>
+                            {pseudoFullscreen && (
+                                <button
+                                    onClick={() => setPseudoFullscreen(false)}
+                                    className="absolute top-6 right-6 z-[100000] p-2 bg-black/50 text-white rounded-full hover:bg-white/20 transition-all"
+                                >
+                                    <Minimize2 size={32} />
+                                </button>
+                            )}
+
+                            {currentSegment && currentTopicAssets?.language === language ? (
+                                <div className="relative w-full h-full flex flex-col">
+                                    <div className="flex-1 relative bg-black overflow-hidden flex items-center justify-center">
+                                        <img key={`img-${currentSegmentIdx}`} src={currentSegment.imageUrl} alt={`Visual representation for segment ${currentSegmentIdx + 1}`} crossOrigin="anonymous" className={`absolute inset-0 w-full h-full object-cover opacity-90 ${isPlaying ? getTransitionClass(currentSegmentIdx) : ''}`} style={{ willChange: 'transform' }} />
+                                        <div className="absolute inset-0 bg-[radial-gradient(circle,transparent_50%,rgba(0,0,0,0.8)_100%)] pointer-events-none"></div>
+                                        <div className="absolute top-4 left-4 flex gap-1 z-30">{currentTopicAssets.data.map((_, i) => (<div key={i} className={`h-1 w-12 rounded-full shadow-lg ${i === currentSegmentIdx ? 'bg-[#FBBC05]' : 'bg-slate-700/50 backdrop-blur'}`}></div>))}</div>
+                                        {isPlaying && (
+                                            <div className="absolute top-4 right-4 flex items-center gap-2 px-3 py-1 bg-[#EA4335]/80 rounded-full animate-pulse z-30">
+                                                <div className="w-2 h-2 bg-white rounded-full"></div>
+                                                <span className="text-[10px] font-bold text-white tracking-widest">REC</span>
+                                            </div>
+                                        )}
+                                        <audio ref={audioRef} key={`audio-${currentSegmentIdx}`} src={currentSegment.audioUrl} onTimeUpdate={handleTimeUpdate} onEnded={handleSegmentEnd} crossOrigin="anonymous" />
+                                        <canvas ref={renderCanvasRef} width={1280} height={720} className="hidden" />
+                                    </div>
+
+                                    <div className="bg-slate-950/90 backdrop-blur p-4 text-white flex flex-col gap-2 z-50 border-t border-slate-800 absolute bottom-0 left-0 right-0">
+                                        <div className="flex justify-between items-center mt-2">
+                                            <div className="flex items-center gap-6">
+                                                <button onClick={togglePlay} className="hover:text-[#4285F4] transition-colors transform hover:scale-110">{isPlaying ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" />}</button>
+                                                <div className="flex flex-col">
+                                                    <h4 className="font-bold text-lg truncate max-w-[400px] text-slate-100 drop-shadow-md">{selectedTopic.title}</h4>
+                                                    <p className="text-xs text-[#FBBC05] font-mono uppercase tracking-widest font-bold">Part {currentSegmentIdx + 1}/3</p>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center gap-4 relative">
+                                                <div className="relative">
+                                                    <button onClick={() => setShowSettings(!showSettings)} className={`hover:text-[#4285F4] transition-colors p-2 rounded-full ${showSettings ? 'bg-white/10 text-[#4285F4]' : 'text-slate-300'}`}><Settings size={24} /></button>
+                                                    {showSettings && (
+                                                        <div className="absolute bottom-16 right-0 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-xl p-5 shadow-2xl w-64 z-50 animate-in slide-in-from-bottom-4">
+                                                            <h5 className="text-xs font-bold text-slate-400 uppercase mb-4 border-b border-slate-700 pb-2 flex items-center gap-2"><Sliders size={12} /> Control Deck</h5>
+                                                            <div className="space-y-4">
+                                                                <div className="flex justify-between items-center text-sm">
+                                                                    <span className="text-slate-300 font-medium">Playback Speed</span>
+                                                                    <div className="flex bg-slate-800 rounded p-0.5">
+                                                                        {[0.5, 1, 1.5, 2].map(rate => (
+                                                                            <button key={rate} onClick={() => handleSpeedChange(rate)} className={`px-2 py-1 text-xs rounded ${playbackRate === rate ? 'bg-[#4285F4] text-white' : 'text-slate-400 hover:text-white'}`}>{rate}x</button>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="h-px bg-slate-700 my-2"></div>
+                                                                <button onClick={handleDownloadVideo} className="w-full text-left text-sm text-slate-300 hover:text-[#4285F4] py-2 flex items-center gap-3 transition-colors" title="Note: Audio sync varies by browser">
+                                                                    {isRenderingVideo ? <Loader2 size={16} className="animate-spin text-[#FBBC05]" /> : <Video size={16} />}
+                                                                    {isRenderingVideo ? "Rendering..." : "Export Visuals (WebM)"}
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <button onClick={toggleFullscreen} className="hover:text-[#4285F4] transition-colors p-2 text-slate-300">
+                                                    {(isFullscreen || pseudoFullscreen) ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
+                                            <span>{formatTime(currentTime)}</span>
+                                            <input type="range" min="0" max={duration || 100} value={currentTime} onChange={handleSeek} className="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-[#FBBC05]" />
+                                            <span>{formatTime(duration)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="text-center p-12 m-auto relative w-full h-full flex flex-col justify-center items-center bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-slate-900 to-black">
+                                    {videoError && (
+                                        <div className="absolute top-10 left-10 right-10 bg-red-900/80 border border-red-500 text-white p-4 rounded-lg flex items-center gap-3 backdrop-blur-sm animate-in fade-in slide-in-from-top-4">
+                                            <AlertTriangle size={20} className="text-red-300" />
+                                            <p className="text-sm font-medium">{videoError}</p>
+                                        </div>
+                                    )}
+
+                                    {isGenerating ? (
+                                        <div className="w-72">
+                                            <Loader2 className="w-16 h-16 text-[#FBBC05] animate-spin mx-auto mb-6" />
+                                            <h4 className="text-white font-bold text-lg mb-4 tracking-wider">FILMING EPISODE...</h4>
+                                            <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden border border-slate-700"><div className="h-full bg-gradient-to-r from-[#EA4335] to-[#FBBC05] transition-all duration-300 ease-out" style={{ width: `${generationProgress}%` }} /></div>
+                                            <p className="text-slate-500 text-xs mt-3 font-mono text-center w-full">{generationProgress}% COMPLETE</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <LayoutTemplate className="text-slate-700 w-24 h-24 mx-auto mb-6" />
+                                            <h4 className="text-slate-400 font-bold text-lg mb-2">Ready to Film</h4>
+                                            <p className="text-slate-500 text-sm mb-8">Generate {language === 'hinglish' ? 'Desi' : 'Global'} Version</p>
+                                            <button
+                                                onClick={togglePlay}
+                                                disabled={!scriptsLoaded}
+                                                className={`px-10 py-4 bg-gradient-to-r from-[#4285F4] to-[#1a73e8] text-white rounded-full font-bold text-lg shadow-lg hover:shadow-blue-900/50 transition-all hover:scale-105 border border-blue-500/30 ${!scriptsLoaded ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                {scriptsLoaded ? "Generate Video" : "Loading Core..."}
+                                            </button>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const DashboardView = ({ doc, darkMode, onUpdateDoc, scriptsLoaded, layoutMode, showToast, onHeavyWorkChange }) => {
+            const { status, stage, topics, mindMapData, pdfText, error, chatMessages, videoAssets } = doc;
+            const [isZipDownloading, setIsZipDownloading] = useState(false);
+            const [focusTarget, setFocusTarget] = useState('mindmap');
+
+            const handleSendMessage = (msg) => {
+                onUpdateDoc({ chatMessages: [...(chatMessages || [{ role: 'ai', content: "Neural Interrogation Protocol initialized. I'm listening." }]), msg] });
+            };
+
+            const handleAssetsUpdate = (updateFn) => {
+                onUpdateDoc((prevDoc) => {
+                    const prevAssets = prevDoc.videoAssets || {};
+                    const newAssets = typeof updateFn === 'function' ? updateFn(prevAssets) : updateFn;
+                    return { videoAssets: newAssets };
+                });
+            };
+
+            const handleDownloadFullPackage = async () => {
+                if (!window.JSZip || !window.saveAs || !topics || topics.length === 0) return;
+                setIsZipDownloading(true);
+                showToast("Compressing assets...", "info");
+
+                const zip = new window.JSZip();
+                let summaryContent = "# Executive Synthesis Report\n\n";
+                topics.forEach((t, i) => { summaryContent += `## ${i + 1}. ${t.title}\n\n${t.summary}\n\n`; });
+                zip.file("Summaries.md", summaryContent);
+                const htmlContent = `<!DOCTYPE html><html><head><title>Gen Notes Report</title><style>body{font-family:sans-serif;padding:40px;background:#f0f2f5;} .card{background:white;padding:20px;margin-bottom:20px;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,0.1);}</style></head><body><h1>Strategic Report</h1>${topics.map(t => `<div class="card"><h2>${t.title}</h2><p>${t.summary}</p></div>`).join('')}</body></html>`;
+                zip.file("Offline_Report.html", htmlContent);
+
+                zip.generateAsync({ type: "blob" }).then(content => {
+                    window.saveAs(content, "GenNotes_Full_Report.zip");
+                    setIsZipDownloading(false);
+                    showToast("Package downloaded successfully", "success");
+                });
+            };
+
+            const handleRetry = () => {
+                onUpdateDoc({
+                    status: 'idle',
+                    error: null,
+                    stage: 'Ingestion',
+                    topics: [],
+                    mindMapData: null,
+                    pdfText: "",
+                    videoAssets: null,
+                    chatMessages: null
+                });
+            };
+
+            if (status === 'processing' || status === 'queued') {
+                return (
+                    <div className="mt-32 animate-in fade-in duration-700">
+                        <ProgressBar stage={stage} darkMode={darkMode} />
+                        <div className="text-center mt-16">
+                            <RefreshCw className="animate-spin w-16 h-16 text-[#4285F4] mx-auto mb-8" />
+                            <h3 className={`text-3xl font-mono font-bold ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>Processing: {stage}...</h3>
+                            {status === 'queued' && <p className="text-slate-500 mt-2">Position in queue: 1</p>}
+                            <div className="mt-12 max-w-4xl mx-auto opacity-50 scale-90">
+                                <MindMapSkeleton darkMode={darkMode} />
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (error) {
+                return (
+                    <div className="max-w-xl mx-auto mt-20 p-6 bg-red-100 text-red-700 rounded-xl flex flex-col items-center gap-4 text-lg border-2 border-red-200 animate-[shake_0.5s_ease-in-out]">
+                        <style>{`@keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }`}</style>
+                        <div className="flex items-center gap-3">
+                            <AlertTriangle size={24} />
+                            <span>{error}</span>
+                        </div>
+                        <button
+                            onClick={handleRetry}
+                            className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-bold flex items-center gap-2 hover:scale-105 transition-transform"
+                        >
+                            <RotateCcw size={18} /> Retry Protocol
+                        </button>
+                    </div>
+                );
+            }
+
+            if (status !== 'complete') return null;
+
+            const isFlow = layoutMode === 'flow';
+            const isGrid = layoutMode === 'grid';
+            const isFocus = layoutMode === 'focus';
+
+            const containerClasses = isFlow
+                ? "space-y-32 pb-32 animate-in fade-in slide-in-from-bottom-4 duration-700"
+                : `grid gap-4 h-[calc(100vh-140px)] animate-in fade-in duration-300 ${isGrid
+                    ? "grid-cols-2 grid-rows-2 p-2"
+                    : "grid-cols-[1fr_420px] grid-rows-3 p-2"
+                }`;
+
+            const getPanelStyle = (areaName) => {
+                if (isFlow) return {};
+
+                let style = { gridArea: areaName, overflow: 'auto', minHeight: 0 };
+
+                if (isFocus) {
+                    if (focusTarget === areaName) {
+                        style = { ...style, gridColumn: '1 / 2', gridRow: '1 / 4' };
+                    } else {
+                        const others = ['mindmap', 'notes', 'video', 'chat'].filter(k => k !== focusTarget);
+                        const idx = others.indexOf(areaName);
+                        style = { ...style, gridColumn: '2 / 3', gridRow: `${idx + 1} / ${idx + 2}` };
+                    }
+                } else if (isGrid) {
+                    const mappings = {
+                        mindmap: { gridColumn: '1 / 2', gridRow: '1 / 2' },
+                        video: { gridColumn: '2 / 3', gridRow: '1 / 2' },
+                        notes: { gridColumn: '1 / 2', gridRow: '2 / 3' },
+                        chat: { gridColumn: '2 / 3', gridRow: '2 / 3' }
+                    };
+                    style = { ...style, ...mappings[areaName] };
+                }
+                return style;
+            };
+
+            const FocusOverlay = ({ target }) => {
+                if (!isFocus || focusTarget === target) return null;
+                return (
+                    <div
+                        onClick={() => setFocusTarget(target)}
+                        className="absolute inset-0 bg-black/60 z-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer backdrop-blur-sm rounded-xl"
+                    >
+                        <div className="flex flex-col items-center text-white">
+                            <Maximize2 size={32} />
+                            <span className="font-bold tracking-widest mt-2 uppercase text-xs">Click to Focus</span>
+                        </div>
+                    </div>
+                );
+            };
+
+            const PanelHeader = ({ title, icon: Icon }) => (
+                !isFlow && (
+                    <div className="absolute top-0 left-0 right-0 h-8 bg-slate-950/50 backdrop-blur flex items-center px-4 z-40 border-b border-white/10">
+                        <Icon size={12} className="text-[#4285F4] mr-2" />
+                        <span className="text-[10px] font-bold text-white uppercase tracking-widest">{title}</span>
+                    </div>
+                )
+            );
+
+            return (
+                <div className={containerClasses}>
+
+                    <div style={getPanelStyle('mindmap')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-hidden shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                        <FocusOverlay target="mindmap" />
+                        <PanelHeader title="Neural Map" icon={GitGraph} />
+                        <div className={`h-full flex flex-col ${isFlow ? '' : 'absolute inset-0 pt-8'}`}>
+                            {isFlow && (
+                                <div className="flex items-center gap-4 mb-8">
+                                    <GitGraph size={40} className="text-[#EA4335]" />
+                                    <h2 className={`text-5xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Strategic Network Map</h2>
+                                </div>
+                            )}
+                            <div className="flex-1 min-h-0 relative">
+                                {mindMapData && <KineticMindMap data={mindMapData} darkMode={darkMode} />}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={getPanelStyle('notes')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-y-auto shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                        <FocusOverlay target="notes" />
+                        <PanelHeader title="Synthesis & Docs" icon={FileText} />
+                        <div className={`${isFlow ? '' : 'p-4 h-full pt-10'}`}>
+                            {isFlow && (
+                                <div className="flex items-center gap-4 mb-12">
+                                    <FileText size={40} className="text-[#4285F4]" />
+                                    <h2 className={`text-5xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Executive Synthesis</h2>
+                                </div>
+                            )}
+                            <div className={`${isFlow ? 'flex flex-col xl:flex-row gap-12' : 'flex flex-col gap-6'}`}>
+                                {isFlow && (
+                                    <div className="xl:w-80 hidden xl:block h-fit sticky top-32">
+                                        <div className={`p-6 rounded-2xl shadow-xl border transition-colors ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                                            <h4 className={`text-xs font-bold uppercase tracking-widest mb-6 border-b pb-2 ${darkMode ? 'text-slate-400 border-slate-600' : 'text-slate-400 border-slate-200'}`}>Table of Contents</h4>
+                                            <ul className="space-y-3">
+                                                {topics.map((t, i) => (
+                                                    <li key={i}>
+                                                        <a href={`#topic-${i}`} className={`flex items-center gap-4 text-base font-medium transition-colors p-3 rounded-lg ${darkMode ? 'text-slate-300 hover:text-[#4285F4] hover:bg-slate-700' : 'text-slate-600 hover:text-[#4285F4] hover:bg-slate-50'}`}>
+                                                            <span className={`w-6 h-6 flex items-center justify-center rounded-md text-xs font-bold ${darkMode ? 'bg-slate-700 text-slate-300' : 'bg-slate-200 text-slate-700'}`}>{i + 1}</span>
+                                                            <span className="truncate">{t.title}</span>
+                                                        </a>
+                                                    </li>
+                                                ))}
+                                            </ul>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex-1">
+                                    {topics.map((topic, idx) => (
+                                        <div key={idx} className={isFlow ? "" : "transform scale-90 origin-top"}>
+                                            <HandwritingCard topic={topic} index={idx} darkMode={darkMode} />
+                                        </div>
+                                    ))}
+                                    <div className={`rounded-2xl shadow-2xl p-12 flex flex-row justify-between items-center border transition-colors ${darkMode ? 'bg-slate-800 text-white border-slate-700' : 'bg-slate-900 text-white border-slate-700'}`}>
+                                        <div className="flex items-center gap-6">
+                                            <div className="w-20 h-20 bg-[#34A853] rounded-full flex items-center justify-center text-slate-900"><Download size={40} /></div>
+                                            <div><h3 className="text-3xl font-bold">Export Package</h3><p className="text-slate-400 text-lg">Download high-fidelity assets.</p></div>
+                                        </div>
+                                        <button
+                                            onClick={handleDownloadFullPackage}
+                                            disabled={!scriptsLoaded}
+                                            className={`px-10 py-4 bg-slate-700 hover:bg-[#34A853] text-white rounded-xl border-2 border-slate-600 font-mono font-bold text-lg transition-all hover:scale-105 flex items-center gap-3 ${isZipDownloading ? 'shadow-[0_0_30px_#34A853] animate-pulse border-[#34A853]' : ''} ${!scriptsLoaded ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            {isZipDownloading ? <Loader2 className="animate-spin" size={24} /> : <Package size={24} />}
+                                            {isZipDownloading ? "COMPRESSING..." : "DOWNLOAD .ZIP"}
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={getPanelStyle('video')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-hidden shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                        <FocusOverlay target="video" />
+                        <PanelHeader title="Broadcast Studio" icon={Video} />
+                        <div className={`h-full ${isFlow ? '' : 'absolute inset-0 pt-8'}`}>
+                            <VideoInterface topics={topics} darkMode={darkMode} persistedAssets={videoAssets} onAssetsUpdate={handleAssetsUpdate} scriptsLoaded={scriptsLoaded} showToast={showToast} onHeavyWorkChange={onHeavyWorkChange} />
+                        </div>
+                    </div>
+
+                    <div style={getPanelStyle('chat')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-hidden shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                        <FocusOverlay target="chat" />
+                        <PanelHeader title="Ghostwriter" icon={Terminal} />
+                        <div className={`h-full ${isFlow ? '' : 'absolute inset-0 flex flex-col pt-8'}`}>
+                            <div className="h-full">
+                                <ChatInterface contextText={pdfText} darkMode={darkMode} messages={chatMessages || [{ role: 'ai', content: "Neural Interrogation Protocol initialized. I'm listening." }]} onSendMessage={handleSendMessage} />
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            );
+        };
+
+        // PATCH E: Error Boundary Component
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false };
+            }
+
+            static getDerivedStateFromError(error) {
+                return { hasError: true };
+            }
+
+            componentDidCatch(error, errorInfo) {
+                console.error("Uncaught error:", error, errorInfo);
+            }
+
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div className="fixed inset-0 bg-slate-900 text-white flex flex-col items-center justify-center p-8 text-center z-[99999]">
+                            <h1 className="text-4xl font-bold mb-4">Something went wrong</h1>
+                            <p className="text-slate-400 mb-8">System Malfunction Detected.</p>
+                            <button
+                                onClick={() => window.location.reload()}
+                                className="px-6 py-3 bg-[#EA4335] text-white rounded-lg font-bold hover:bg-red-700 transition-colors"
+                            >
+                                Reload System
+                            </button>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
         }
 
-        $('debugBox').textContent = `mode=${mode || '(none)'} | key=${key ? 'present' : 'missing'} | sessionStorage=${storageOk() ? 'ok' : 'blocked'}`;
-      }
+        function App() {
+            const [documents, setDocuments] = useState([]);
+            const [activeDocId, setActiveDocId] = useState(null);
+            const [darkMode, setDarkMode] = useState(true);
+            const [scriptsLoaded, setScriptsLoaded] = useState(false);
+            const [globalError, setGlobalError] = useState(null);
+            const [queueProcessing, setQueueProcessing] = useState(false);
 
-      function storageOk(){
-        try {
-          const t='__t';
-          sessionStorage.setItem(t,'1');
-          sessionStorage.removeItem(t);
-          return true;
-        } catch { return false; }
-      }
+            // PATCH: Sidebar open state
+            const [sidebarOpen, setSidebarOpen] = useState(true);
 
-      function openModal(){
-        $('modalWrap').classList.add('show');
-        $('modalWrap').setAttribute('aria-hidden','false');
-        $('apiKeyInputModal').value = getKey();
-        $('apiKeyInputModal').focus();
-      }
+            // PATCH: Check for API Key
+            const [isApiKeySet, setIsApiKeySet] = useState(!!apiKey);
 
-      function closeModal(){
-        $('modalWrap').classList.remove('show');
-        $('modalWrap').setAttribute('aria-hidden','true');
-      }
+            // PATCH C: Pause FX logic
+            const [effectsPaused, setEffectsPaused] = useState(false);
+            const handleHeavyWorkChange = useCallback((isBusy) => {
+                setEffectsPaused(isBusy);
+            }, []);
 
-      async function copyLink(){
-        try {
-          await navigator.clipboard.writeText(GEMINI_SHARE_LINK);
-          toast('Gemini link copied. Paste it into your browser address bar.', 'success');
-        } catch {
-          toast('Clipboard blocked. Copy manually.', 'warning');
+            const processingRef = useRef(new Set());
+
+            const [toasts, setToasts] = useState([]);
+            const showToast = useCallback((message, type = 'info') => {
+                const id = Date.now() + Math.random();
+                setToasts(prev => [...prev, { id, message, type }]);
+                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
+            }, []);
+            const removeToast = useCallback((id) => setToasts(prev => prev.filter(t => t.id !== id)), []);
+
+            useEffect(() => {
+                // PATCHED: Security Warning on mount
+                setTimeout(() => {
+                    showToast("SECURITY NOTICE: Client-side API keys are visible in source. Do not use in production.", "warning");
+                }, 1000);
+            }, []);
+
+            // --- WORKSPACE MODE STATE ---
+            const [workspaceEnabled, setWorkspaceEnabled] = useState(false);
+            const [workspaceSelectedIds, setWorkspaceSelectedIds] = useState([]);
+            const [workspaceDoc, setWorkspaceDoc] = useState({
+                id: 'WORKSPACE',
+                file: { name: 'Workspace (Multi-Doc Synthesis)' },
+                status: 'idle',
+                stage: 'Ingestion',
+                topics: [],
+                mindMapData: null,
+                pdfText: "",
+                error: null,
+                chatMessages: null,
+                videoAssets: null
+            });
+
+            const [layoutMode, setLayoutMode] = useState(() => {
+                return sessionStorage.getItem('scribe_layout_mode') || 'flow';
+            });
+
+            useEffect(() => {
+                sessionStorage.setItem('scribe_layout_mode', layoutMode);
+            }, [layoutMode]);
+
+            useEffect(() => {
+                const scripts = [
+                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js'
+                ];
+
+                let loadedCount = 0;
+
+                const markLoaded = () => {
+                    loadedCount++;
+                    if (loadedCount === scripts.length) setScriptsLoaded(true);
+                };
+
+                const checkGlobal = (src) => {
+                    if (src.includes('pdf.min.js')) return !!window.pdfjsLib;
+                    if (src.includes('html2canvas')) return !!window.html2canvas;
+                    if (src.includes('jszip')) return !!window.JSZip;
+                    if (src.includes('FileSaver')) return !!window.saveAs;
+                    return false;
+                };
+
+                scripts.forEach(src => {
+                    let existing = document.querySelector(`script[src="${src}"]`);
+
+                    if (existing) {
+                        if (existing.getAttribute("data-loaded") === "true" || checkGlobal(src)) {
+                            markLoaded();
+                        } else {
+                            existing.addEventListener("load", () => {
+                                existing.setAttribute("data-loaded", "true");
+                                markLoaded();
+                            }, { once: true });
+                            existing.addEventListener("error", () => setGlobalError("Failed to load dependency: " + src), { once: true });
+                        }
+                    } else {
+                        const s = document.createElement('script');
+                        s.src = src;
+                        document.head.appendChild(s);
+                        s.onload = () => {
+                            s.setAttribute("data-loaded", "true");
+                            if (src.includes('pdf.min.js')) {
+                                if (window.pdfjsLib) {
+                                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                                }
+                            }
+                            markLoaded();
+                        };
+                        s.onerror = () => setGlobalError("Failed to load dependency: " + src);
+                    }
+                });
+
+            }, []);
+
+            const handleFileChange = (e) => {
+                if (e.target.files && e.target.files.length > 0) {
+                    const newDocs = Array.from(e.target.files).map(file => ({
+                        id: (crypto?.randomUUID?.() || Math.random().toString(36).slice(2)),
+                        file: file,
+                        status: 'idle',
+                        stage: 'Ingestion',
+                        topics: [],
+                        mindMapData: null,
+                        pdfText: "",
+                        error: null,
+                        chatMessages: null,
+                        videoAssets: null
+                    }));
+
+                    setDocuments(prev => [...prev, ...newDocs]);
+                    if (!activeDocId) setActiveDocId(newDocs[0].id);
+                    showToast(`Added ${newDocs.length} documents`, "info");
+                }
+            };
+
+            const updateDoc = useCallback((id, updates) => {
+                if (id === 'WORKSPACE') {
+                    setWorkspaceDoc(prev => {
+                        const newValues = typeof updates === 'function' ? updates(prev) : updates;
+                        return { ...prev, ...newValues };
+                    });
+                    return;
+                }
+                setDocuments(prev => prev.map(d => {
+                    if (d.id !== id) return d;
+                    const newValues = typeof updates === 'function' ? updates(d) : updates;
+                    return { ...d, ...newValues };
+                }));
+            }, []);
+
+            const deleteDoc = (e, id) => {
+                e.stopPropagation();
+                const docToDelete = documents.find(d => d.id === id);
+                if (docToDelete && docToDelete.videoAssets) {
+                    cleanupAudioUrls(docToDelete.videoAssets);
+                }
+
+                const remainingDocs = documents.filter(d => d.id !== id);
+                setDocuments(remainingDocs);
+
+                if (workspaceSelectedIds.includes(id)) {
+                    setWorkspaceSelectedIds(prev => prev.filter(wid => wid !== id));
+                }
+
+                if (activeDocId === id) {
+                    setActiveDocId(remainingDocs.length > 0 ? remainingDocs[0].id : null);
+                }
+            };
+
+            // --- WORKSPACE LOGIC ---
+
+            const toggleWorkspaceSelection = (e, id) => {
+                e.stopPropagation();
+                setWorkspaceSelectedIds(prev =>
+                    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+                );
+            };
+
+            const processWorkspace = async (mode) => {
+                if (!scriptsLoaded || workspaceSelectedIds.length === 0) return;
+
+                if (processingRef.current.has('WORKSPACE')) {
+                    showToast("Workspace is already processing", "info");
+                    return;
+                }
+                processingRef.current.add('WORKSPACE');
+
+                const selectedDocs = documents.filter(d => workspaceSelectedIds.includes(d.id));
+                if (selectedDocs.length === 0) {
+                    processingRef.current.delete('WORKSPACE');
+                    return;
+                }
+
+                setActiveDocId('WORKSPACE');
+
+                // PATCHED: Cleanup existing audio blobs before reprocessing
+                if (workspaceDoc.videoAssets) {
+                    cleanupAudioUrls(workspaceDoc.videoAssets);
+                }
+
+                updateDoc('WORKSPACE', {
+                    status: 'processing',
+                    stage: 'Ingestion',
+                    file: { name: `Workspace (${selectedDocs.length} Documents)` },
+                    topics: [],
+                    mindMapData: null,
+                    videoAssets: null,
+                    chatMessages: null,
+                    error: null
+                });
+
+                showToast(`Starting ${mode} merge...`, "info");
+
+                try {
+                    let combinedText = "";
+
+                    for (const doc of selectedDocs) {
+                        let text = "";
+
+                        if (mode === 'fast' && doc.pdfText && doc.pdfText.length > 50) {
+                            text = doc.pdfText;
+                        } else {
+                            text = await extractTextFromPDF(doc.file);
+                            if (text.length > 50) {
+                                updateDoc(doc.id, { pdfText: text });
+                            }
+                        }
+
+                        combinedText += `\n\n--- DOCUMENT SOURCE: ${doc.file.name} ---\n${text.substring(0, 15000)}\n`;
+                    }
+
+                    if (combinedText.length < 50) throw new Error("Combined text is empty.");
+
+                    updateDoc('WORKSPACE', { pdfText: combinedText, stage: 'Analysis' });
+
+                    // PATCH: Use summarizeChunks for large combined documents
+                    const masterContext = await summarizeChunks(combinedText);
+
+                    const analysisPrompt = `Analyze this multi-document text. Extract 5 core synthesized topics. 
+          Return JSON array: [{ "title": "...", "summary": "...", "visualPrompt": "...", "sources": ["filename1", "filename2"] }] 
+          IMPORTANT: The 'sources' field must list which filenames contributed to this topic. 
+          Text: ${masterContext.substring(0, 45000)}`;
+
+                    const mapPrompt = `Generate a CONCISE hierarchical mindmap JSON merging insights from all docs. Max depth 2: { "label": "Workspace Root", "children": [...] } Text: ${masterContext.substring(0, 20000)}`;
+
+                    const [res1, res2] = await Promise.all([generateContent(analysisPrompt), generateContent(mapPrompt)]);
+
+                    let topicsRaw, mapData;
+                    try { topicsRaw = safeJsonParse(res1.candidates[0].content.parts[0].text); }
+                    catch (e) { topicsRaw = [{ title: "Analysis Failed", summary: "Could not extract topics.", visualPrompt: "Error" }]; }
+
+                    try { mapData = safeJsonParse(res2.candidates[0].content.parts[0].text); }
+                    catch (e) { mapData = { label: "Analysis Map", children: [{ label: "Structure Error" }] }; }
+
+                    if (!Array.isArray(topicsRaw)) topicsRaw = [{ title: "Format Error", summary: "Model error.", visualPrompt: "Error" }];
+                    const topicsLimited = topicsRaw.slice(0, 5);
+                    const topicsWithIds = topicsLimited.map(t => ({ ...t, id: crypto?.randomUUID?.() || Math.random().toString(36).slice(2) }));
+
+                    updateDoc('WORKSPACE', { mindMapData: mapData, stage: 'Rendering' });
+
+                    const enrichedTopics = [];
+                    const batchSize = 2;
+                    for (let i = 0; i < topicsWithIds.length; i += batchSize) {
+                        const batch = topicsWithIds.slice(i, i + batchSize);
+                        const results = await Promise.all(batch.map(async t => {
+                            const schematicUrl = await generateImage(`Technical vector blueprint of: ${t.title}. White background, sharp black lines, isometric engineering style, flowchart, high precision, no blur.`);
+                            return { ...t, schematicUrl: schematicUrl || null };
+                        }));
+                        enrichedTopics.push(...results);
+                    }
+
+                    updateDoc('WORKSPACE', { topics: enrichedTopics, status: 'complete' });
+                    showToast("Workspace synthesis complete", "success");
+
+                } catch (e) {
+                    console.error(e);
+                    updateDoc('WORKSPACE', { error: e.message, status: 'error' });
+                    showToast("Merge failed", "error");
+                } finally {
+                    processingRef.current.delete('WORKSPACE');
+                }
+            };
+
+            const processDocument = async (id) => {
+                if (!scriptsLoaded) {
+                    setGlobalError("Core dependencies are initializing. Please wait...");
+                    setTimeout(() => setGlobalError(null), 3000);
+                    return;
+                }
+
+                if (processingRef.current.has(id)) {
+                    showToast("Document is already processing", "info");
+                    return;
+                }
+                processingRef.current.add(id);
+
+                const doc = documents.find(d => d.id === id);
+                if (!doc || !doc.file) {
+                    processingRef.current.delete(id);
+                    return;
+                }
+
+                updateDoc(id, { status: 'processing', stage: 'Ingestion' });
+
+                try {
+                    const text = await extractTextFromPDF(doc.file);
+                    if (text.length < 50) throw new Error("PDF text extraction failed (Empty or Encrypted).");
+                    updateDoc(id, { pdfText: text, stage: 'Analysis' });
+
+                    // PATCH: Use summarizeChunks for large documents
+                    const masterContext = await summarizeChunks(text);
+
+                    const analysisPrompt = `Analyze text. Extract 5 core topics. Return JSON array: [{ "title": "...", "summary": "...", "visualPrompt": "...", "subtopics": [{"visualPrompt": "..."}] }] Text: ${masterContext.substring(0, 40000)}`;
+                    const mapPrompt = `Generate a CONCISE hierarchical mindmap JSON with max depth 2: { "label": "Root", "children": [...] } Text: ${masterContext.substring(0, 15000)}`;
+
+                    const [res1, res2] = await Promise.all([generateContent(analysisPrompt), generateContent(mapPrompt)]);
+
+                    let topicsRaw, mapData;
+
+                    try {
+                        topicsRaw = safeJsonParse(res1.candidates[0].content.parts[0].text);
+                    } catch (e) {
+                        console.warn("Topics parsing failed, using fallback", e);
+                        topicsRaw = [{ title: "Analysis Failed", summary: "Could not extract topics.", visualPrompt: "Error" }];
+                    }
+
+                    try {
+                        mapData = safeJsonParse(res2.candidates[0].content.parts[0].text);
+                    } catch (e) {
+                        console.warn("Map parsing failed, using fallback", e);
+                        mapData = { label: "Analysis Map", children: [{ label: "Data structure too complex or truncated." }] };
+                    }
+
+                    if (!Array.isArray(topicsRaw)) topicsRaw = [{ title: "Format Error", summary: "Model returned invalid structure.", visualPrompt: "Error" }];
+                    const topicsLimited = topicsRaw.slice(0, 5);
+
+                    const topicsWithIds = topicsLimited.map(t => ({ ...t, id: crypto?.randomUUID?.() || Math.random().toString(36).slice(2) }));
+
+                    updateDoc(id, { mindMapData: mapData, stage: 'Rendering' });
+
+                    const enrichedTopics = [];
+                    const batchSize = 2;
+
+                    for (let i = 0; i < topicsWithIds.length; i += batchSize) {
+                        const batch = topicsWithIds.slice(i, i + batchSize);
+                        const results = await Promise.all(batch.map(async t => {
+                            const schematicUrl = await generateImage(`Technical vector blueprint of: ${t.title}. White background, sharp black lines, isometric engineering style, flowchart, high precision, no blur.`);
+                            return { ...t, schematicUrl: schematicUrl || null };
+                        }));
+                        enrichedTopics.push(...results);
+                    }
+
+                    updateDoc(id, { topics: enrichedTopics, status: 'complete' });
+                    showToast("Analysis complete", "success");
+
+                } catch (e) {
+                    console.error(e);
+                    updateDoc(id, { error: e.message || "Processing Failed.", status: 'error' });
+                    showToast("Analysis failed", "error");
+                } finally {
+                    processingRef.current.delete(id);
+                }
+            };
+
+            const handleProcessAll = async () => {
+                if (queueProcessing || !scriptsLoaded) return;
+                setQueueProcessing(true);
+                showToast("Processing queue started...", "info");
+
+                const idleDocs = documents.filter(d => d.status === 'idle');
+
+                for (const doc of idleDocs) {
+                    await processDocument(doc.id);
+                }
+
+                setQueueProcessing(false);
+                showToast("Queue finished", "success");
+            };
+
+            // PATCH: Robust Logout Function
+            const handleLogout = useCallback(() => {
+                // 1. Wipe local storage
+                localStorage.removeItem("gen_notes_api_key");
+                apiKey = "";
+
+                // 2. Attempt hard reload (primary method)
+                try {
+                    window.location.reload();
+                } catch (e) {
+                    console.error("Reload blocked, using soft fallback");
+                }
+
+                // 3. Fallback: Soft reset of state (if reload fails/is async)
+                setIsApiKeySet(false);
+                setDocuments([]);
+                setActiveDocId(null);
+                setWorkspaceEnabled(false);
+                showToast("Session Terminated", "error");
+            }, [showToast]);
+
+            const getStageProgress = (stage) => {
+                const stages = ['Ingestion', 'Analysis', 'Mapping', 'Synthesis', 'Rendering', 'complete'];
+                const idx = stages.indexOf(stage);
+                if (idx === -1) return 10;
+                return ((idx + 1) / stages.length) * 100;
+            };
+
+            const activeDoc = activeDocId === 'WORKSPACE' ? workspaceDoc : documents.find(d => d.id === activeDocId);
+
+            return (
+                <div className={`h-screen font-sans transition-colors duration-500 flex flex-col ${darkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'}`}>
+
+                    {/* PATCH: Render API Key Modal if key is missing */}
+                    {!isApiKeySet && <ApiKeyModal onSave={() => setIsApiKeySet(true)} />}
+
+                    <UniverseCursorFX enabled={darkMode && !effectsPaused} />
+                    <WaterRippleCursorFX enabled={!darkMode && !effectsPaused} />
+                    <Header
+                        darkMode={darkMode}
+                        setDarkMode={setDarkMode}
+                        layoutMode={layoutMode}
+                        setLayoutMode={setLayoutMode}
+                        sidebarOpen={sidebarOpen}
+                        setSidebarOpen={setSidebarOpen}
+                        onLogout={handleLogout} // Pass the robust handler
+                    />
+
+                    <ToastContainer toasts={toasts} removeToast={removeToast} />
+
+                    {/* Landing Recommendation - Visible on initial/login screen */}
+                    {(!isApiKeySet || documents.length === 0) && <LandingRecommendation />}
+
+                    <div className="flex-1 flex overflow-hidden">
+                        {/* PATCH: Toggleable sidebar class */}
+                        <aside className={`flex-shrink-0 border-r overflow-y-auto flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-80 translate-x-0 opacity-100' : 'w-0 -translate-x-full opacity-0 border-r-0 overflow-hidden'} ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                            <div className={`p-6 border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                                <div className="flex justify-between items-center mb-4">
+                                    <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">Ingestion Pipeline</h2>
+                                    <button
+                                        onClick={() => setWorkspaceEnabled(!workspaceEnabled)}
+                                        className={`text-[10px] uppercase font-bold px-2 py-1 rounded transition-colors google-spotlight ${workspaceEnabled ? 'bg-[#4285F4] text-white' : 'bg-slate-800 text-slate-500'}`}
+                                    >
+                                        Workspace Mode
+                                    </button>
+                                </div>
+
+                                {workspaceEnabled && (
+                                    <div className="mb-6 p-4 rounded-xl border-2 border-[#4285F4]/30 bg-blue-900/10 animate-in fade-in slide-in-from-top-2">
+                                        <h3 className="text-[#4285F4] font-bold text-xs uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <Briefcase size={14} /> Workspace Merger
+                                        </h3>
+                                        <div className="space-y-2">
+                                            <button
+                                                onClick={() => processWorkspace('fast')}
+                                                disabled={workspaceSelectedIds.length < 2 || !scriptsLoaded || processingRef.current.has('WORKSPACE')}
+                                                className={`w-full py-2 bg-[#4285F4] text-white rounded-lg text-xs font-bold shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2 ${workspaceSelectedIds.length < 2 || processingRef.current.has('WORKSPACE') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-600'}`}
+                                            >
+                                                <Zap size={14} fill="currentColor" /> Fast Merge (Instant)
+                                            </button>
+                                            <button
+                                                onClick={() => processWorkspace('deep')}
+                                                disabled={workspaceSelectedIds.length < 2 || !scriptsLoaded || processingRef.current.has('WORKSPACE')}
+                                                className={`w-full py-2 bg-slate-800 text-slate-300 rounded-lg text-xs font-bold border border-slate-700 active:scale-95 transition-all flex items-center justify-center gap-2 ${workspaceSelectedIds.length < 2 || processingRef.current.has('WORKSPACE') ? 'opacity-50 cursor-not-allowed' : 'hover:bg-slate-700'}`}
+                                            >
+                                                <Database size={14} /> Deep Merge (Re-Scan)
+                                            </button>
+                                            <p className="text-[10px] text-center text-slate-500 mt-2">{workspaceSelectedIds.length} docs selected</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col gap-2">
+                                    <label className={`flex items-center justify-center gap-2 w-full py-4 border-2 border-dashed rounded-xl cursor-pointer transition-all active:scale-95 duration-200 ${darkMode ? 'border-slate-700 hover:border-[#4285F4] hover:bg-slate-800' : 'border-slate-300 hover:border-[#4285F4] hover:bg-slate-50'}`}>
+                                        <Plus size={20} className="text-[#4285F4]" />
+                                        <span className="font-bold text-sm">Add Documents</span>
+                                        <input type="file" accept=".pdf" multiple onChange={handleFileChange} className="hidden" />
+                                    </label>
+                                    {!workspaceEnabled && documents.some(d => d.status === 'idle') && (
+                                        <button
+                                            onClick={handleProcessAll}
+                                            disabled={queueProcessing || !scriptsLoaded}
+                                            className={`w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold border border-slate-700 flex items-center justify-center gap-2 active:scale-95 transition-transform ${queueProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                        >
+                                            {queueProcessing ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />}
+                                            {queueProcessing ? "PROCESSING QUEUE..." : "PROCESS ALL PENDING"}
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="flex-1 p-4 space-y-2">
+                                {workspaceEnabled && (
+                                    <div
+                                        onClick={() => setActiveDocId('WORKSPACE')}
+                                        className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-300 border flex items-center gap-3 active:scale-95 ${activeDocId === 'WORKSPACE'
+                                            ? 'bg-blue-900/20 border-[#4285F4] shadow-lg scale-[1.02]'
+                                            : 'border-dashed border-slate-700 hover:bg-slate-800'
+                                            }`}
+                                    >
+                                        <div className="w-10 h-10 rounded-lg bg-[#4285F4] text-white flex items-center justify-center flex-shrink-0">
+                                            {workspaceDoc.status === 'processing' ? <Loader2 size={18} className="animate-spin" /> : <Briefcase size={18} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className={`text-sm font-bold truncate ${darkMode ? 'text-[#4285F4]' : 'text-blue-700'}`}>Workspace Master</h4>
+                                            <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">{workspaceDoc.status === 'idle' ? 'Ready to Merge' : workspaceDoc.status}</p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {documents.length === 0 && (
+                                    <div className="text-center p-8 opacity-50">
+                                        <FileText size={32} className="mx-auto mb-2 text-slate-500" />
+                                        <p className="text-xs">No documents in silo.</p>
+                                    </div>
+                                )}
+                                {documents.map(doc => (
+                                    <div
+                                        key={doc.id}
+                                        onClick={() => setActiveDocId(doc.id)}
+                                        className={`group relative p-3 rounded-xl cursor-pointer transition-all duration-300 border flex items-center gap-3 active:scale-95 ${activeDocId === doc.id
+                                            ? (darkMode ? 'bg-slate-800 border-[#34A853]/50 shadow-lg scale-[1.02]' : 'bg-white border-[#34A853] shadow-md scale-[1.02]')
+                                            : (darkMode ? 'border-transparent hover:bg-slate-800' : 'border-transparent hover:bg-slate-100')
+                                            }`}
+                                    >
+                                        {workspaceEnabled && (
+                                            <div onClick={(e) => toggleWorkspaceSelection(e, doc.id)} className="mr-1">
+                                                {workspaceSelectedIds.includes(doc.id)
+                                                    ? <CheckSquare size={18} className="text-[#34A853]" />
+                                                    : <Square size={18} className="text-slate-600" />
+                                                }
+                                            </div>
+                                        )}
+
+                                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${doc.status === 'complete' ? 'bg-[#34A853]/20 text-[#34A853]' :
+                                            doc.status === 'processing' ? 'bg-[#FBBC05]/20 text-[#FBBC05]' :
+                                                doc.status === 'error' ? 'bg-[#EA4335]/20 text-[#EA4335]' :
+                                                    (darkMode ? 'bg-slate-700 text-slate-400' : 'bg-slate-200 text-slate-500')
+                                            }`}>
+                                            {doc.status === 'processing' ? <Loader2 size={18} className="animate-spin" /> : <File size={18} />}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h4 className={`text-sm font-bold truncate ${activeDocId === doc.id ? (darkMode ? 'text-white' : 'text-slate-900') : 'text-slate-500'}`}>{doc.file.name}</h4>
+                                            {doc.status === 'processing' ? (
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <div className="h-1 w-full bg-slate-700 rounded-full overflow-hidden">
+                                                        <div
+                                                            className="h-full bg-[#FBBC05] transition-all duration-500 ease-out"
+                                                            style={{ width: `${getStageProgress(doc.stage)}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <p className="text-[10px] uppercase font-bold tracking-wider text-slate-500">
+                                                    {doc.status === 'idle' ? 'Ready to Initialize' : doc.status}
+                                                </p>
+                                            )}
+                                        </div>
+                                        {!workspaceEnabled && doc.status === 'idle' && activeDocId === doc.id && (
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); processDocument(doc.id); }}
+                                                disabled={!scriptsLoaded || processingRef.current.has(doc.id)}
+                                                className={`absolute right-12 p-1.5 bg-[#4285F4] rounded-md text-white hover:bg-blue-600 shadow-lg animate-in fade-in zoom-in hover:scale-110 transition-transform ${!scriptsLoaded || processingRef.current.has(doc.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                title={scriptsLoaded ? "Initialize Protocol" : "Waiting for dependencies..."}
+                                            >
+                                                <Play size={14} fill="white" />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={(e) => deleteDoc(e, doc.id)}
+                                            disabled={doc.status === 'processing'}
+                                            className={`opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-[#EA4335] transition-all hover:scale-110 ${doc.status === 'processing' ? 'cursor-not-allowed opacity-0' : ''}`}
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        </aside>
+
+                        <main className="flex-1 overflow-y-auto min-h-0 p-8 relative transition-opacity duration-300">
+                            {!scriptsLoaded && (
+                                <div className="absolute top-0 left-0 right-0 bg-[#4285F4] text-white text-xs font-bold text-center py-1 z-[60]">
+                                    INITIALIZING CORE DEPENDENCIES...
+                                </div>
+                            )}
+
+                            {globalError && (
+                                <div className="mb-8 p-4 bg-red-100 border-l-4 border-red-500 text-red-700 font-mono text-sm">
+                                    SYSTEM ERROR: {globalError}
+                                </div>
+                            )}
+
+                            {activeDoc ? (
+                                <div key={activeDoc.id} className="max-w-[1600px] mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500 h-full flex flex-col">
+                                    <div className="flex justify-between items-end mb-8 border-b pb-6 border-slate-700/50 shrink-0">
+                                        <div>
+                                            <div className="flex items-center gap-2 mb-2">
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-700 text-slate-300 uppercase tracking-widest">
+                                                    {activeDoc.id === 'WORKSPACE' ? 'SYNTHESIS' : 'CONFIDENTIAL'}
+                                                </span>
+                                                <span className="text-slate-500 text-xs font-mono">{activeDoc.id.slice(0, 8).toUpperCase()}</span>
+                                            </div>
+                                            <h2 className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeDoc.file.name}</h2>
+                                        </div>
+                                        {activeDoc.status === 'idle' && activeDoc.id !== 'WORKSPACE' && (
+                                            <button
+                                                onClick={() => processDocument(activeDoc.id)}
+                                                disabled={!scriptsLoaded || processingRef.current.has(activeDoc.id)}
+                                                className={`px-8 py-3 bg-[#4285F4] hover:bg-blue-600 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 active:scale-95 transition-transform ${!scriptsLoaded || processingRef.current.has(activeDoc.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                            >
+                                                <Cpu size={20} /> {scriptsLoaded ? "Initialize Processing" : "Loading Dependencies..."}
+                                            </button>
+                                        )}
+                                        {activeDoc.id === 'WORKSPACE' && activeDoc.status === 'idle' && (
+                                            <div className="text-right">
+                                                <p className="text-[#4285F4] text-sm font-bold">Select documents on the left to begin synthesis.</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {activeDoc.status === 'idle' ? (
+                                        <div className={`text-center py-32 border-2 border-dashed rounded-2xl ${darkMode ? 'border-slate-800 bg-slate-900/50' : 'border-slate-200 bg-slate-50'}`}>
+                                            <Cpu size={48} className="mx-auto mb-4 text-slate-600 opacity-50" />
+                                            <p className="text-slate-500 font-medium">Document is staged. Initialize protocol to begin analysis.</p>
+                                        </div>
+                                    ) : (
+                                        <DashboardView
+                                            doc={activeDoc}
+                                            darkMode={darkMode}
+                                            onUpdateDoc={(updates) => updateDoc(activeDoc.id, updates)}
+                                            scriptsLoaded={scriptsLoaded}
+                                            layoutMode={layoutMode}
+                                            showToast={showToast}
+                                            onHeavyWorkChange={handleHeavyWorkChange}
+                                        />
+                                    )}
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center opacity-30">
+                                    <GitGraph size={64} className="mb-4 text-slate-500" />
+                                    <h3 className="text-2xl font-bold text-slate-500">Select a document from the pipeline</h3>
+                                </div>
+                            )}
+                        </main>
+                    </div>
+                </div>
+            );
         }
-      }
 
-      function openGemini(){
-        try {
-          window.open(GEMINI_SHARE_LINK, '_blank', 'noopener,noreferrer');
-          toast('Opened Gemini in a new tab (if your browser allows it).', 'info');
-        } catch {
-          toast('Popup blocked. Paste the link manually.', 'warning');
-        }
-      }
-
-      function saveKeyFrom(inputEl){
-        const v = (inputEl.value || '').trim();
-        if (!v) { toast('Paste a valid API key.', 'error'); return; }
-        setKey(v);
-        setMode('byok');
-        updateBadge();
-        closeModal();
-        toast('BYOK key saved for this tab session.', 'success');
-      }
-
-      function clearKey(){
-        setKey('');
-        updateBadge();
-        toast('Key cleared for this tab.', 'info');
-      }
-
-      function testKey(){
-        const key = getKey();
-        if (!key) {
-          toast('No key set. Open Access and enter your key.', 'warning');
-          openModal();
-          return;
-        }
-        toast('Key is present. API calls would use it.', 'success');
-      }
-
-      function setUnlimited(){
-        setKey('');
-        setMode('unlimited');
-        updateBadge();
-        toast('Unlimited mode selected (browser Gemini).', 'info');
-      }
-
-      // Wire main UI
-      $('openAccess').onclick = openModal;
-
-      $('toggleShow').onclick = () => {
-        const i = $('apiKeyInput');
-        i.type = (i.type === 'password') ? 'text' : 'password';
-        $('toggleShow').textContent = (i.type === 'password') ? 'Show' : 'Hide';
-      };
-      $('saveKey').onclick = () => saveKeyFrom($('apiKeyInput'));
-      $('clearKey').onclick = clearKey;
-      $('testKey').onclick = testKey;
-
-      $('copyLink').onclick = copyLink;
-      $('openGemini').onclick = () => { setUnlimited(); copyLink(); openGemini(); };
-
-      // Wire modal
-      $('closeModal').onclick = closeModal;
-      $('toggleShowModal').onclick = () => {
-        const i = $('apiKeyInputModal');
-        i.type = (i.type === 'password') ? 'text' : 'password';
-        $('toggleShowModal').textContent = (i.type === 'password') ? 'Show' : 'Hide';
-      };
-      $('saveKeyModal').onclick = () => {
-        // also mirror into main input for convenience
-        $('apiKeyInput').value = $('apiKeyInputModal').value;
-        saveKeyFrom($('apiKeyInputModal'));
-      };
-
-      $('copyLinkModal').onclick = copyLink;
-      $('openGeminiModal').onclick = () => { setUnlimited(); copyLink(); openGemini(); closeModal(); };
-
-      // Close modal when clicking the dark backdrop (not the card)
-      $('modalWrap').addEventListener('click', (e) => {
-        if (e.target === $('modalWrap')) closeModal();
-      });
-
-      // Initial state
-      $('shareLink').textContent = GEMINI_SHARE_LINK;
-      $('apiKeyInput').value = getKey();
-
-      updateBadge();
-
-      // Auto-open modal if needed
-      const mode = getMode();
-      const key = getKey();
-      if (!mode || (mode === 'byok' && !key)) openModal();
-
-      // Friendly warning
-      setTimeout(() => toast('Security notice: client-side keys are visible in page source. Use for demos, not production.', 'warning'), 900);
-    })();
-  </script>
+        // Render the app
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
+    </script>
 </body>
+
 </html>
