@@ -89,9 +89,11 @@
 
         /* Crisp Panel Override */
         .crisp-panel {
-            backdrop-filter: none !important;
-            background-color: rgba(15, 23, 42, 0.95) !important;
-            /* Slate 900 equivalent */
+            backdrop-filter: blur(24px) saturate(180%) !important;
+            -webkit-backdrop-filter: blur(24px) saturate(180%) !important;
+            background-color: rgba(15, 23, 42, 0.75) !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37) !important;
         }
 
         /* PATCH: Kinetic Mind Map - Breathing Animation */
@@ -459,61 +461,66 @@
 
         // PATCH: Recursive Summarization - "Infinite PDF" Handler
         // PHASE 3 OPTIMIZATION: Semantic chunking at sentence boundaries
+        const runChunkingInWorker = (text, chunkSize) => {
+            return new Promise((resolve, reject) => {
+                const workerCode = `
+                    self.onmessage = function(e) {
+                        const { text, chunkSize } = e.data;
+                        const chunks = [];
+                        let startIndex = 0;
+
+                        while (startIndex < text.length) {
+                            let endIndex = Math.min(startIndex + chunkSize, text.length);
+                            if (endIndex < text.length) {
+                                const searchWindow = text.substring(startIndex, endIndex);
+                                let breakPoint = -1;
+                                for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                                    const char = searchWindow[i];
+                                    if (char === '.' || char === '?' || char === '!') {
+                                        breakPoint = i + 1;
+                                        break;
+                                    }
+                                }
+                                if (breakPoint === -1) {
+                                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                                        if (searchWindow[i] === ' ') {
+                                            breakPoint = i + 1;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (breakPoint === -1 || breakPoint === 0) {
+                                    breakPoint = searchWindow.length;
+                                }
+                                endIndex = startIndex + breakPoint;
+                            }
+                            const chunk = text.substring(startIndex, endIndex).trim();
+                            if (chunk.length > 0) chunks.push(chunk);
+                            startIndex = endIndex;
+                        }
+                        self.postMessage(chunks);
+                    };
+                `;
+                const blob = new Blob([workerCode], { type: 'application/javascript' });
+                const worker = new Worker(URL.createObjectURL(blob));
+                worker.onmessage = (e) => {
+                    resolve(e.data);
+                    worker.terminate();
+                };
+                worker.onerror = (err) => {
+                    reject(err);
+                    worker.terminate();
+                };
+                worker.postMessage({ text, chunkSize });
+            });
+        };
+
         const summarizeChunks = async (text, chunkSize = 10000) => {
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
 
-            // PHASE 3: Semantic chunking - split at sentence boundaries
-            const chunks = [];
-            let startIndex = 0;
-
-            while (startIndex < text.length) {
-                // Calculate the ideal end position
-                let endIndex = Math.min(startIndex + chunkSize, text.length);
-
-                // If we're not at the end of the text, find a good break point
-                if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
-                    const searchWindow = text.substring(startIndex, endIndex);
-
-                    // Find last period, question mark, or exclamation mark
-                    let breakPoint = -1;
-                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
-                        const char = searchWindow[i];
-                        if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
-                            break;
-                        }
-                    }
-
-                    // If no punctuation found, look for last space
-                    if (breakPoint === -1) {
-                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
-                            if (searchWindow[i] === ' ') {
-                                breakPoint = i + 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
-                    if (breakPoint === -1 || breakPoint === 0) {
-                        breakPoint = searchWindow.length;
-                    }
-
-                    endIndex = startIndex + breakPoint;
-                }
-
-                // Extract the chunk and add it
-                const chunk = text.substring(startIndex, endIndex).trim();
-                if (chunk.length > 0) {
-                    chunks.push(chunk);
-                }
-
-                // CRITICAL: Always advance startIndex to prevent infinite loop
-                startIndex = endIndex;
-            }
+            // PHASE 3: Semantic chunking - split at sentence boundaries via Worker
+            const chunks = await runChunkingInWorker(text, chunkSize);
 
             log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
 
@@ -565,7 +572,7 @@
         };
 
         // --- UNIVERSE CURSOR FX (DARK MODE) ---
-        const UniverseCursorFX = ({ enabled }) => {
+        const UniverseCursorFX = React.memo(({ enabled }) => {
             // PATCH A: Shared reduced-motion helper, computed ONCE
             const reduceMotion = useMemo(() => prefersReducedMotion(), []);
             const canvasRef = useRef(null);
@@ -680,11 +687,11 @@
 
             if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-        };
+        });
 
         // --- WATER RIPPLE CURSOR FX (LIGHT MODE) ---
         // PATCH 1: Ensure WaterRippleCursorFX is defined correctly
-        const WaterRippleCursorFX = ({ enabled }) => {
+        const WaterRippleCursorFX = React.memo(({ enabled }) => {
             // PATCH A: Shared reduced-motion helper, computed ONCE
             const reduceMotion = useMemo(() => prefersReducedMotion(), []);
             const canvasRef = useRef(null);
@@ -791,7 +798,7 @@
 
             if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-        };
+        });
 
         // --- TOAST COMPONENT ---
         const ToastContainer = ({ toasts, removeToast }) => (
@@ -1086,7 +1093,7 @@
         };
 
         // PATCH: MindMapNode with breathing animation
-        const MindMapNode = ({ node, isRoot = false, darkMode }) => {
+        const MindMapNode = React.memo(({ node, isRoot = false, darkMode }) => {
             const [collapsed, setCollapsed] = useState(false);
             if (!node) return null;
             const handleToggle = (e) => { e.stopPropagation(); if (node.children?.length > 0) setCollapsed(!collapsed); };
@@ -1117,7 +1124,7 @@
                     )}
                 </div>
             );
-        };
+        });
 
         const KineticMindMap = ({ data, darkMode }) => {
             const [scale, setScale] = useState(0.8);
@@ -1555,6 +1562,11 @@
                 }
             }, [currentSegmentIdx, playbackRate, currentTopicAssets]);
 
+            /**
+             * Orchestrates the generation of video assets (Script, Audio, Images).
+             * @param {string|null} styleIdOverride - Optional style ID to force a specific aesthetic.
+             * @returns {Promise<Object|null>} The generated assets object or null on failure.
+             */
             const handleGenerateAssets = async (styleIdOverride = null) => {
                 if (isGeneratingRef.current) return null;
                 isGeneratingRef.current = true;
@@ -2410,6 +2422,19 @@
 
             // PATCH: Sidebar open state
             const [sidebarOpen, setSidebarOpen] = useState(true);
+
+            // PATCH: Global Keyboard Shortcuts
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    // Ctrl+B: Toggle Sidebar
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                        e.preventDefault();
+                        setSidebarOpen(prev => !prev);
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, []);
 
             // PATCH: Check for API Key
             const [isApiKeySet, setIsApiKeySet] = useState(!!apiKey);
