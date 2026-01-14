@@ -565,7 +565,7 @@
         };
 
         // --- UNIVERSE CURSOR FX (DARK MODE) ---
-        const UniverseCursorFX = ({ enabled }) => {
+        const UniverseCursorFX = React.memo(({ enabled }) => {
             // PATCH A: Shared reduced-motion helper, computed ONCE
             const reduceMotion = useMemo(() => prefersReducedMotion(), []);
             const canvasRef = useRef(null);
@@ -680,11 +680,11 @@
 
             if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-        };
+        });
 
         // --- WATER RIPPLE CURSOR FX (LIGHT MODE) ---
         // PATCH 1: Ensure WaterRippleCursorFX is defined correctly
-        const WaterRippleCursorFX = ({ enabled }) => {
+        const WaterRippleCursorFX = React.memo(({ enabled }) => {
             // PATCH A: Shared reduced-motion helper, computed ONCE
             const reduceMotion = useMemo(() => prefersReducedMotion(), []);
             const canvasRef = useRef(null);
@@ -791,13 +791,13 @@
 
             if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-        };
+        });
 
         // --- TOAST COMPONENT ---
         const ToastContainer = ({ toasts, removeToast }) => (
             <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
                 {toasts.map(toast => (
-                    <div key={toast.id} className="pointer-events-auto bg-[#1e1e1e] text-white px-4 py-3 rounded-lg shadow-2xl border border-slate-700 flex items-center gap-3 animate-in slide-in-from-right-10 fade-in duration-300">
+                    <div key={toast.id} className="pointer-events-auto bg-slate-900/90 backdrop-blur-md text-white px-4 py-3 rounded-xl shadow-2xl border border-white/10 flex items-center gap-3 animate-in slide-in-from-right-10 fade-in zoom-in-95 duration-300 hover:scale-105 transition-transform">
                         {toast.type === 'success' && <CheckCircle size={18} className="text-[#34A853]" />}
                         {toast.type === 'info' && <Info size={18} className="text-[#4285F4]" />}
                         {toast.type === 'error' && <AlertTriangle size={18} className="text-[#EA4335]" />}
@@ -879,8 +879,8 @@
             };
 
             return (
-                <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-black/90 backdrop-blur-md animate-in fade-in duration-500">
-                    <div className="bg-slate-900 border border-slate-700 p-8 rounded-2xl shadow-2xl max-w-md w-full relative overflow-hidden">
+                <div className="fixed inset-0 z-[100000] flex items-center justify-center bg-slate-950/60 backdrop-blur-xl animate-in fade-in duration-500">
+                    <div className="bg-slate-900/90 backdrop-blur-2xl border border-white/10 p-8 rounded-2xl shadow-[0_0_50px_rgba(0,0,0,0.5)] max-w-md w-full relative overflow-hidden">
                         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#4285F4] via-[#EA4335] to-[#FBBC05]"></div>
                         <div className="flex justify-center mb-6">
                             <div className="w-16 h-16 rounded-full bg-[#4285F4]/10 border border-[#4285F4]/30 flex items-center justify-center animate-pulse">
@@ -1005,13 +1005,13 @@
         // PATCH: Updated Header to accept sidebar control props
         // PATCH: Added onLogout prop support
         const Header = ({ darkMode, setDarkMode, layoutMode, setLayoutMode, sidebarOpen, setSidebarOpen, onLogout }) => (
-            <header className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#4285F4]'} text-slate-900 p-4 pl-6 shadow-xl border-b-2 sticky top-0 z-50 transition-colors duration-300 flex justify-between items-center`}>
+            <header className={`${darkMode ? 'bg-slate-900/80 backdrop-blur-xl border-white/10' : 'bg-white/80 backdrop-blur-xl border-[#4285F4]/20'} text-slate-900 p-4 pl-6 shadow-2xl border-b sticky top-0 z-50 transition-all duration-300 flex justify-between items-center`}>
                 <div className="flex items-center gap-8">
                     <h1 className={`text-3xl font-extrabold tracking-tighter flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         {/* PATCH: Added sidebar toggle button */}
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
-                            className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
+                            className={`p-1.5 rounded-lg transition-all active:scale-95 ${darkMode ? 'hover:bg-white/10 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
                             title={sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
                         >
                             <PanelLeft size={24} />
@@ -1086,7 +1086,7 @@
         };
 
         // PATCH: MindMapNode with breathing animation
-        const MindMapNode = ({ node, isRoot = false, darkMode }) => {
+        const MindMapNode = React.memo(({ node, isRoot = false, darkMode }) => {
             const [collapsed, setCollapsed] = useState(false);
             if (!node) return null;
             const handleToggle = (e) => { e.stopPropagation(); if (node.children?.length > 0) setCollapsed(!collapsed); };
@@ -1117,7 +1117,7 @@
                     )}
                 </div>
             );
-        };
+        });
 
         const KineticMindMap = ({ data, darkMode }) => {
             const [scale, setScale] = useState(0.8);
@@ -1269,8 +1269,8 @@
             }, [topic.schematicUrl]);
 
             return (
-                <div id={`topic-${index}`} className={`rounded-2xl shadow-xl overflow-hidden border-2 flex flex-col mb-16 scroll-mt-32 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200'}`}>
-                    <div className={`p-6 border-b-2 flex justify-between items-center relative z-20 ${darkMode ? 'bg-slate-800 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
+                <div id={`topic-${index}`} className={`rounded-2xl shadow-xl overflow-hidden border-2 flex flex-col mb-16 scroll-mt-32 hover:-translate-y-1 hover:shadow-2xl transition-all duration-300 ${darkMode ? 'bg-slate-900/80 backdrop-blur-lg border-white/10' : 'bg-white/80 backdrop-blur-lg border-slate-200/50'}`}>
+                    <div className={`p-6 border-b-2 flex justify-between items-center relative z-20 ${darkMode ? 'bg-slate-900/50 backdrop-blur-md border-white/5' : 'bg-white/50 backdrop-blur-md border-slate-200/50'}`}>
                         <h3 className={`font-bold font-mono text-xl uppercase tracking-widest flex items-center gap-4 ${darkMode ? 'text-slate-200' : 'text-slate-800'}`}>
                             <span className={`w-10 h-10 rounded-full flex items-center justify-center font-bold font-mono text-base ${darkMode ? 'bg-[#4285F4] text-white' : 'bg-slate-900 text-white'}`}>{index + 1}</span>
                             <div className="flex flex-col">
@@ -1555,6 +1555,19 @@
                 }
             }, [currentSegmentIdx, playbackRate, currentTopicAssets]);
 
+            /**
+             * Orchestrates the generation of video assets (Audio, Images, Scripts) via the Neural Core.
+             *
+             * @param {string|null} styleIdOverride - Optional style ID to force a specific aesthetic (e.g., 'pixar').
+             * @returns {Promise<Object|null>} The generated assets object containing data, language, and styleId, or null on failure.
+             *
+             * Workflow:
+             * 1. Locks the generation process (`isGeneratingRef`).
+             * 2. Constructs a prompt based on the selected style and language.
+             * 3. Fetches the script and visual prompts from the Text Model.
+             * 4. Parallels the generation of Audio (TTS) and Images (Imagen) for all segments.
+             * 5. Updates the global state with the new assets.
+             */
             const handleGenerateAssets = async (styleIdOverride = null) => {
                 if (isGeneratingRef.current) return null;
                 isGeneratingRef.current = true;
@@ -2836,8 +2849,8 @@
 
                     <div className="flex-1 flex overflow-hidden">
                         {/* PATCH: Toggleable sidebar class */}
-                        <aside className={`flex-shrink-0 border-r overflow-y-auto flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-80 translate-x-0 opacity-100' : 'w-0 -translate-x-full opacity-0 border-r-0 overflow-hidden'} ${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                            <div className={`p-6 border-b ${darkMode ? 'border-slate-800' : 'border-slate-200'}`}>
+                        <aside className={`flex-shrink-0 border-r overflow-y-auto flex flex-col transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-80 translate-x-0 opacity-100' : 'w-0 -translate-x-full opacity-0 border-r-0 overflow-hidden'} ${darkMode ? 'bg-slate-900/80 backdrop-blur-xl border-white/10' : 'bg-white/80 backdrop-blur-xl border-slate-200/50'}`}>
+                            <div className={`p-6 border-b ${darkMode ? 'border-white/10' : 'border-slate-200/50'}`}>
                                 <div className="flex justify-between items-center mb-4">
                                     <h2 className="text-xs font-bold uppercase tracking-widest text-slate-500">Ingestion Pipeline</h2>
                                     <button
