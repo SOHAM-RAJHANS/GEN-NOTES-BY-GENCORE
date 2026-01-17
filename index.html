@@ -87,13 +87,6 @@
             border-style: solid;
         }
 
-        /* Crisp Panel Override */
-        .crisp-panel {
-            backdrop-filter: none !important;
-            background-color: rgba(15, 23, 42, 0.95) !important;
-            /* Slate 900 equivalent */
-        }
-
         /* PATCH: Kinetic Mind Map - Breathing Animation */
         @keyframes nodeBreathing {
 
@@ -807,45 +800,52 @@
         });
 
         // --- TOAST COMPONENT ---
-        const ToastContainer = ({ toasts, removeToast }) => (
-            <div className="fixed bottom-6 right-6 z-[200000] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
-                {toasts.map(toast => (
-                    <div
-                        key={toast.id}
-                        className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
-                    >
-                        <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
-                            toast.type === 'success' ? 'text-[#34A853]' :
-                            toast.type === 'error' ? 'text-[#EA4335]' :
-                            toast.type === 'warning' ? 'text-[#FBBC05]' :
-                            'text-[#4285F4]'
-                        }`}>
-                            {toast.type === 'success' && <CheckCircle size={16} />}
-                            {toast.type === 'info' && <Info size={16} />}
-                            {toast.type === 'error' && <AlertTriangle size={16} />}
-                            {toast.type === 'warning' && <Lock size={16} />}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize">{toast.type}</h5>
-                            <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
-                        </div>
-
-                        <button
-                            onClick={() => removeToast(toast.id)}
-                            className="text-slate-500 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+        const ToastContainer = ({ toasts, removeToast }) => {
+            const visibleToasts = toasts.slice(-5);
+            return (
+                <div className="fixed bottom-6 right-6 z-[200000] flex flex-col items-end pointer-events-none perspective-[1000px]">
+                    {visibleToasts.map((toast, idx) => (
+                        <div
+                            key={toast.id}
+                            className="pointer-events-auto w-[360px] backdrop-blur-2xl bg-slate-900/90 text-white px-5 py-4 rounded-2xl shadow-[0_10px_40px_-10px_rgba(0,0,0,0.8)] border border-white/10 flex items-start gap-4 mb-3 animate-in slide-in-from-right-full fade-in zoom-in-95 duration-500 ease-out hover:scale-[1.02] hover:-translate-x-1 transition-all group relative overflow-hidden"
                         >
-                            <X size={16} />
-                        </button>
+                            {/* Decorative Shine */}
+                            <div className="absolute inset-0 bg-gradient-to-br from-white/5 via-transparent to-transparent pointer-events-none opacity-50"></div>
 
-                        {/* Progress Bar for Auto-Dismiss Visual */}
-                        <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white/10 rounded-full overflow-hidden">
-                             <div className="h-full bg-gradient-to-r from-transparent via-white/50 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
+                            <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${toast.type === 'success' ? 'text-[#34A853]' :
+                                toast.type === 'error' ? 'text-[#EA4335]' :
+                                    toast.type === 'warning' ? 'text-[#FBBC05]' :
+                                        'text-[#4285F4]'
+                                }`}>
+                                {toast.type === 'success' && <CheckCircle size={18} />}
+                                {toast.type === 'info' && <Info size={18} />}
+                                {toast.type === 'error' && <AlertTriangle size={18} />}
+                                {toast.type === 'warning' && <Lock size={18} />}
+                            </div>
+
+                            <div className="flex-1 min-w-0 relative z-10">
+                                <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize flex items-center justify-between">
+                                    {toast.type}
+                                </h5>
+                                <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
+                            </div>
+
+                            <button
+                                onClick={() => removeToast(toast.id)}
+                                className="relative z-10 text-slate-500 hover:text-white transition-colors p-1.5 -mr-2 -mt-2 rounded-lg hover:bg-white/10"
+                            >
+                                <X size={14} />
+                            </button>
+
+                            {/* Progress Bar */}
+                            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/5">
+                                <div className="h-full bg-gradient-to-r from-transparent via-[#4285F4] to-transparent w-full animate-[shimmer_1.5s_infinite]"></div>
+                            </div>
                         </div>
-                    </div>
-                ))}
-            </div>
-        );
+                    ))}
+                </div>
+            );
+        };
 
         // --- LANDING RECOMMENDATION COMPONENT ---
         const LandingRecommendation = () => (
@@ -1137,8 +1137,8 @@
         ${isRoot
                             ? 'bg-gradient-to-br from-[#4285F4] to-[#1a73e8] text-white shadow-blue-900/20 scale-110 border-transparent'
                             : darkMode
-                                ? 'bg-slate-800 text-white border-slate-600 hover:border-[#FBBC05] hover:shadow-yellow-500/20'
-                                : 'bg-white text-slate-900 border-slate-300 hover:border-[#FBBC05] hover:shadow-xl'}
+                                ? 'bg-slate-900/80 backdrop-blur-md text-white border-white/10 hover:border-[#FBBC05] hover:shadow-[0_0_20px_rgba(251,188,5,0.2)]'
+                                : 'bg-white/80 backdrop-blur-md text-slate-900 border-slate-300 hover:border-[#FBBC05] hover:shadow-xl'}
         ${hasChildren ? 'hover:scale-105' : ''}
       `}>
                         <span className={`font-bold ${isRoot ? 'text-2xl' : 'text-base'} block tracking-tight`}>{node.label}</span>
@@ -2328,7 +2328,7 @@
             return (
                 <div className={containerClasses}>
 
-                    <div style={getPanelStyle('mindmap')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-hidden shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                    <div style={getPanelStyle('mindmap')} className={`relative rounded-2xl ${!isFlow ? 'border overflow-hidden shadow-2xl' : ''} ${darkMode ? 'border-white/10 bg-slate-900/60 backdrop-blur-xl' : 'border-slate-200 bg-white/80 backdrop-blur-xl'}`}>
                         <FocusOverlay target="mindmap" />
                         <PanelHeader title="Neural Map" icon={GitGraph} />
                         <div className={`h-full flex flex-col ${isFlow ? '' : 'absolute inset-0 pt-8'}`}>
@@ -2344,7 +2344,7 @@
                         </div>
                     </div>
 
-                    <div style={getPanelStyle('notes')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-y-auto shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                    <div style={getPanelStyle('notes')} className={`relative rounded-2xl ${!isFlow ? 'border overflow-y-auto shadow-2xl' : ''} ${darkMode ? 'border-white/10 bg-slate-900/60 backdrop-blur-xl' : 'border-slate-200 bg-white/80 backdrop-blur-xl'}`}>
                         <FocusOverlay target="notes" />
                         <PanelHeader title="Synthesis & Docs" icon={FileText} />
                         <div className={`${isFlow ? '' : 'p-4 h-full pt-10'}`}>
@@ -2397,7 +2397,7 @@
                         </div>
                     </div>
 
-                    <div style={getPanelStyle('video')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-hidden shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                    <div style={getPanelStyle('video')} className={`relative rounded-2xl ${!isFlow ? 'border overflow-hidden shadow-2xl' : ''} ${darkMode ? 'border-white/10 bg-slate-900/60 backdrop-blur-xl' : 'border-slate-200 bg-white/80 backdrop-blur-xl'}`}>
                         <FocusOverlay target="video" />
                         <PanelHeader title="Broadcast Studio" icon={Video} />
                         <div className={`h-full ${isFlow ? '' : 'absolute inset-0 pt-8'}`}>
@@ -2405,7 +2405,7 @@
                         </div>
                     </div>
 
-                    <div style={getPanelStyle('chat')} className={`relative rounded-2xl ${!isFlow ? 'border-2 overflow-hidden shadow-lg' : ''} ${darkMode ? 'border-slate-700 bg-slate-900 crisp-panel' : 'border-slate-200 bg-white'}`}>
+                    <div style={getPanelStyle('chat')} className={`relative rounded-2xl ${!isFlow ? 'border overflow-hidden shadow-2xl' : ''} ${darkMode ? 'border-white/10 bg-slate-900/60 backdrop-blur-xl' : 'border-slate-200 bg-white/80 backdrop-blur-xl'}`}>
                         <FocusOverlay target="chat" />
                         <PanelHeader title="Ghostwriter" icon={Terminal} />
                         <div className={`h-full ${isFlow ? '' : 'absolute inset-0 flex flex-col pt-8'}`}>
