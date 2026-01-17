@@ -128,6 +128,12 @@
             box-shadow: 0 0 30px #FBBC05, 0 0 60px rgba(251, 188, 5, 0.3) !important;
             border-color: #FBBC05 !important;
         }
+
+        /* Shimmer Animation for Skeletons and Toasts */
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
     </style>
 </head>
 
@@ -457,8 +463,15 @@
             }
         };
 
-        // PATCH: Recursive Summarization - "Infinite PDF" Handler
-        // PHASE 3 OPTIMIZATION: Semantic chunking at sentence boundaries
+        /**
+         * Recursively processes large text inputs by splitting them into semantically meaningful chunks
+         * (respecting sentence boundaries) and summarizing them in parallel using the Gemini API.
+         * This enables the handling of "Infinite PDFs" that exceed the model's token limit.
+         *
+         * @param {string} text - The full raw text content to be summarized.
+         * @param {number} [chunkSize=10000] - The target character count for each chunk (soft limit).
+         * @returns {Promise<string>} A concatenated master context string derived from the summaries.
+         */
         const summarizeChunks = async (text, chunkSize = 10000) => {
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
@@ -565,7 +578,7 @@
         };
 
         // --- UNIVERSE CURSOR FX (DARK MODE) ---
-        const UniverseCursorFX = ({ enabled }) => {
+        const UniverseCursorFX = React.memo(({ enabled }) => {
             // PATCH A: Shared reduced-motion helper, computed ONCE
             const reduceMotion = useMemo(() => prefersReducedMotion(), []);
             const canvasRef = useRef(null);
@@ -680,11 +693,11 @@
 
             if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-        };
+        });
 
         // --- WATER RIPPLE CURSOR FX (LIGHT MODE) ---
         // PATCH 1: Ensure WaterRippleCursorFX is defined correctly
-        const WaterRippleCursorFX = ({ enabled }) => {
+        const WaterRippleCursorFX = React.memo(({ enabled }) => {
             // PATCH A: Shared reduced-motion helper, computed ONCE
             const reduceMotion = useMemo(() => prefersReducedMotion(), []);
             const canvasRef = useRef(null);
@@ -791,19 +804,44 @@
 
             if (!enabled || reduceMotion) return null; // PATCH A: Immediate return
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
-        };
+        });
 
         // --- TOAST COMPONENT ---
         const ToastContainer = ({ toasts, removeToast }) => (
-            <div className="fixed bottom-6 right-6 z-[100] flex flex-col gap-2 pointer-events-none">
+            <div className="fixed bottom-6 right-6 z-[200000] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
                 {toasts.map(toast => (
-                    <div key={toast.id} className="pointer-events-auto bg-[#1e1e1e] text-white px-4 py-3 rounded-lg shadow-2xl border border-slate-700 flex items-center gap-3 animate-in slide-in-from-right-10 fade-in duration-300">
-                        {toast.type === 'success' && <CheckCircle size={18} className="text-[#34A853]" />}
-                        {toast.type === 'info' && <Info size={18} className="text-[#4285F4]" />}
-                        {toast.type === 'error' && <AlertTriangle size={18} className="text-[#EA4335]" />}
-                        {toast.type === 'warning' && <Lock size={18} className="text-[#FBBC05]" />}
-                        <span className="text-sm font-medium">{toast.message}</span>
-                        <button onClick={() => removeToast(toast.id)} className="ml-2 hover:text-slate-300"><X size={14} /></button>
+                    <div
+                        key={toast.id}
+                        className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
+                    >
+                        <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
+                            toast.type === 'success' ? 'text-[#34A853]' :
+                            toast.type === 'error' ? 'text-[#EA4335]' :
+                            toast.type === 'warning' ? 'text-[#FBBC05]' :
+                            'text-[#4285F4]'
+                        }`}>
+                            {toast.type === 'success' && <CheckCircle size={16} />}
+                            {toast.type === 'info' && <Info size={16} />}
+                            {toast.type === 'error' && <AlertTriangle size={16} />}
+                            {toast.type === 'warning' && <Lock size={16} />}
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                            <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize">{toast.type}</h5>
+                            <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
+                        </div>
+
+                        <button
+                            onClick={() => removeToast(toast.id)}
+                            className="text-slate-500 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+                        >
+                            <X size={16} />
+                        </button>
+
+                        {/* Progress Bar for Auto-Dismiss Visual */}
+                        <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white/10 rounded-full overflow-hidden">
+                             <div className="h-full bg-gradient-to-r from-transparent via-white/50 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
+                        </div>
                     </div>
                 ))}
             </div>
@@ -1046,7 +1084,6 @@
 
         const MindMapSkeleton = ({ darkMode }) => (
             <div className={`w-full h-[600px] rounded-2xl border-2 flex items-center justify-center relative overflow-hidden ${darkMode ? 'bg-slate-900 border-slate-700' : 'bg-slate-50 border-slate-200'}`}>
-                <style>{`@keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }`}</style>
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-[shimmer_2s_infinite] -skew-x-12"></div>
                 <div className="flex flex-col items-center gap-8 opacity-50">
                     <div className={`w-40 h-16 rounded-xl animate-pulse ${darkMode ? 'bg-slate-700' : 'bg-slate-300'}`}></div>
@@ -1086,7 +1123,8 @@
         };
 
         // PATCH: MindMapNode with breathing animation
-        const MindMapNode = ({ node, isRoot = false, darkMode }) => {
+        // OPTIMIZATION: Memoized to prevent recursive re-renders
+        const MindMapNode = React.memo(({ node, isRoot = false, darkMode }) => {
             const [collapsed, setCollapsed] = useState(false);
             if (!node) return null;
             const handleToggle = (e) => { e.stopPropagation(); if (node.children?.length > 0) setCollapsed(!collapsed); };
@@ -1117,8 +1155,16 @@
                     )}
                 </div>
             );
-        };
+        });
 
+        /**
+         * Renders a force-directed-like graph visualization of the document structure.
+         * Allows panning, zooming, and exporting to PNG.
+         *
+         * @param {Object} props
+         * @param {Object} props.data - The hierarchical data structure for the mind map (root node).
+         * @param {boolean} props.darkMode - Current theme state for styling.
+         */
         const KineticMindMap = ({ data, darkMode }) => {
             const [scale, setScale] = useState(0.8);
             const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -1555,6 +1601,13 @@
                 }
             }, [currentSegmentIdx, playbackRate, currentTopicAssets]);
 
+            /**
+             * Orchestrates the generation of video assets (scripts, audio, images) using the Gemini API.
+             * Utilizes parallel processing for speed and manages the state of the "filming" process.
+             *
+             * @param {string|null} [styleIdOverride=null] - Optional style ID to force a specific visual style (e.g., 'pixar').
+             * @returns {Promise<Object|null>} The generated assets object or null if failed/aborted.
+             */
             const handleGenerateAssets = async (styleIdOverride = null) => {
                 if (isGeneratingRef.current) return null;
                 isGeneratingRef.current = true;
