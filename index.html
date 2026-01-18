@@ -584,6 +584,7 @@
             const canvasRef = useRef(null);
             const particles = useRef([]);
             const animationFrameId = useRef(null);
+            const lastPos = useRef({ x: 0, y: 0, time: 0 }); // PATCH: Velocity tracking
 
             useEffect(() => {
                 if (!enabled || reduceMotion) return; // PATCH A: check reduced motion immediately
@@ -608,12 +609,13 @@
                 handleResize();
                 window.addEventListener('resize', handleResize);
 
-                const createParticle = (x, y) => {
+                // PATCH: Velocity-reactive particles
+                const createParticle = (x, y, vxOffset = 0, vyOffset = 0) => {
                     const isPlanet = Math.random() < 0.05; // 1 in 20
                     return {
                         x, y,
-                        vx: (Math.random() - 0.5) * 0.5,
-                        vy: (Math.random() - 0.5) * 0.5,
+                        vx: vxOffset + (Math.random() - 0.5) * 0.5,
+                        vy: vyOffset + (Math.random() - 0.5) * 0.5,
                         life: 1.0,
                         decay: Math.random() * 0.015 + 0.005, // 1-2s approx
                         size: isPlanet ? Math.random() * 4 + 2 : Math.random() * 1.5,
@@ -624,17 +626,32 @@
 
                 const handleMouseMove = (e) => {
                     if (document.hidden) return;
-                    // PATCH A compliance: Removed redundant matchMedia check here.
 
                     // Check interactive targets
                     const target = e.target;
                     if (target.closest('button, a, input, textarea, select, [role="button"], .no-universe')) return;
 
-                    // Spawn
-                    particles.current.push(createParticle(e.clientX, e.clientY));
+                    // PATCH: Velocity Calculation
+                    const now = performance.now();
+                    const dx = e.clientX - lastPos.current.x;
+                    const dy = e.clientY - lastPos.current.y;
+
+                    lastPos.current = { x: e.clientX, y: e.clientY, time: now };
+
+                    // Add slight momentum based on mouse speed (dampened)
+                    const momentumX = dx * 0.05;
+                    const momentumY = dy * 0.05;
+
+                    // Spawn more particles if moving fast
+                    const speed = Math.sqrt(dx * dx + dy * dy);
+                    const count = speed > 50 ? 3 : speed > 20 ? 2 : 1;
+
+                    for (let k = 0; k < count; k++) {
+                        particles.current.push(createParticle(e.clientX, e.clientY, momentumX, momentumY));
+                    }
 
                     // PATCH D: Hard-cap particle array by trimming
-                    if (particles.current.length > 120) {
+                    if (particles.current.length > 150) {
                         particles.current.shift();
                     }
                 };
@@ -812,7 +829,7 @@
                 {toasts.map(toast => (
                     <div
                         key={toast.id}
-                        className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
+                        className="pointer-events-auto backdrop-blur-2xl bg-gradient-to-br from-slate-900/95 via-slate-900/90 to-slate-800/90 text-white px-5 py-4 rounded-xl shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] border border-white/10 ring-1 ring-white/5 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
                     >
                         <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
                             toast.type === 'success' ? 'text-[#34A853]' :
@@ -2633,6 +2650,12 @@
                 );
             };
 
+            /**
+             * Orchestrates the merging of multiple documents into a single "Workspace" entity.
+             * Extracts text, synthesizes a master summary using Gemini, and generates a unified Mind Map.
+             *
+             * @param {string} mode - 'fast' (uses existing text) or 'deep' (re-scans PDFs).
+             */
             const processWorkspace = async (mode) => {
                 if (!scriptsLoaded || workspaceSelectedIds.length === 0) return;
 
@@ -2738,6 +2761,15 @@
                 }
             };
 
+            /**
+             * Core pipeline for single-document ingestion.
+             * 1. Extracts Text (PDF.js)
+             * 2. Chunking & Summarization (Gemini)
+             * 3. Topic Extraction & Mind Map Generation
+             * 4. Visual Asset Generation (Blueprints)
+             *
+             * @param {string} id - The document ID to process.
+             */
             const processDocument = async (id) => {
                 if (!scriptsLoaded) {
                     setGlobalError("Core dependencies are initializing. Please wait...");
