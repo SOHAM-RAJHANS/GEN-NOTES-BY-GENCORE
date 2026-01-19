@@ -463,6 +463,56 @@
             }
         };
 
+        // WORKER: Text Chunking Processor (CPU Intensive)
+        const CHUNKING_WORKER_CODE = `
+        self.onmessage = function(e) {
+            const { text, chunkSize } = e.data;
+            const chunks = [];
+            let startIndex = 0;
+
+            while (startIndex < text.length) {
+                let endIndex = Math.min(startIndex + chunkSize, text.length);
+
+                if (endIndex < text.length) {
+                    // Look for sentence boundaries in the window
+                    const searchWindow = text.substring(startIndex, endIndex);
+                    let breakPoint = -1;
+
+                    // Priority 1: Sentence Endings (. ? !)
+                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                        const char = searchWindow[i];
+                        if (char === '.' || char === '?' || char === '!') {
+                            breakPoint = i + 1;
+                            break;
+                        }
+                    }
+
+                    // Priority 2: Spaces (Word boundaries)
+                    if (breakPoint === -1) {
+                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                            if (searchWindow[i] === ' ') {
+                                breakPoint = i + 1;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Fallback: Hard cut
+                    if (breakPoint === -1 || breakPoint === 0) {
+                        breakPoint = searchWindow.length;
+                    }
+
+                    endIndex = startIndex + breakPoint;
+                }
+
+                const chunk = text.substring(startIndex, endIndex).trim();
+                if (chunk.length > 0) chunks.push(chunk);
+                startIndex = endIndex;
+            }
+            self.postMessage({ chunks });
+        };
+        `;
+
         /**
          * Recursively processes large text inputs by splitting them into semantically meaningful chunks
          * (respecting sentence boundaries) and summarizing them in parallel using the Gemini API.
@@ -476,77 +526,47 @@
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
 
-            // PHASE 3: Semantic chunking - split at sentence boundaries
-            const chunks = [];
-            let startIndex = 0;
+            log(`[Infinite PDF] Offloading chunking to Blob Worker for ${text.length} chars`);
 
-            while (startIndex < text.length) {
-                // Calculate the ideal end position
-                let endIndex = Math.min(startIndex + chunkSize, text.length);
+            // Create Worker
+            const blob = new Blob([CHUNKING_WORKER_CODE], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            const worker = new Worker(workerUrl);
 
-                // If we're not at the end of the text, find a good break point
-                if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
-                    const searchWindow = text.substring(startIndex, endIndex);
-
-                    // Find last period, question mark, or exclamation mark
-                    let breakPoint = -1;
-                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
-                        const char = searchWindow[i];
-                        if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
-                            break;
-                        }
-                    }
-
-                    // If no punctuation found, look for last space
-                    if (breakPoint === -1) {
-                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
-                            if (searchWindow[i] === ' ') {
-                                breakPoint = i + 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
-                    if (breakPoint === -1 || breakPoint === 0) {
-                        breakPoint = searchWindow.length;
-                    }
-
-                    endIndex = startIndex + breakPoint;
-                }
-
-                // Extract the chunk and add it
-                const chunk = text.substring(startIndex, endIndex).trim();
-                if (chunk.length > 0) {
-                    chunks.push(chunk);
-                }
-
-                // CRITICAL: Always advance startIndex to prevent infinite loop
-                startIndex = endIndex;
-            }
-
-            log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
-
-            // OPTIMIZATION: Parallel processing with Promise.all
-            const summaryPromises = chunks.map(chunk => {
-                const prompt = `You are a precise academic summarizer. Summarize this text into exactly 5 key bullet points. Be concise and factual:\n\n${chunk}`;
-                return generateContent(prompt).then(res => {
-                    const summary = res.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                    return summary;
-                }).catch(err => {
-                    console.warn("[Chunk Summary Failed]", err);
-                    return "• [Summary unavailable for this section]";
+            try {
+                const chunks = await new Promise((resolve, reject) => {
+                    worker.onmessage = (e) => resolve(e.data.chunks);
+                    worker.onerror = (e) => reject(e);
+                    worker.postMessage({ text, chunkSize });
                 });
-            });
 
-            const summaries = await Promise.all(summaryPromises);
-            const masterContext = summaries.join("\n\n--- SECTION BREAK ---\n\n");
+                log(`[Infinite PDF] Worker returned ${chunks.length} chunks`);
 
-            log(`[Infinite PDF] Created master context: ${masterContext.length} chars from ${chunks.length} summaries`);
-            return masterContext;
+                // OPTIMIZATION: Parallel processing with Promise.all
+                const summaryPromises = chunks.map(chunk => {
+                    const prompt = `You are a precise academic summarizer. Summarize this text into exactly 5 key bullet points. Be concise and factual:\n\n${chunk}`;
+                    return generateContent(prompt).then(res => {
+                        return res.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                    }).catch(err => {
+                        console.warn("[Chunk Summary Failed]", err);
+                        return "• [Summary unavailable for this section]";
+                    });
+                });
+
+                const summaries = await Promise.all(summaryPromises);
+                const masterContext = summaries.join("\n\n--- SECTION BREAK ---\n\n");
+
+                log(`[Infinite PDF] Created master context: ${masterContext.length} chars from ${chunks.length} summaries`);
+                return masterContext;
+
+            } catch (e) {
+                console.error("Worker Chunking Failed", e);
+                // Graceful degradation: return truncated text
+                return text.substring(0, 50000);
+            } finally {
+                worker.terminate();
+                URL.revokeObjectURL(workerUrl);
+            }
         };
 
         const extractTextFromPDF = async (file) => {
@@ -2633,6 +2653,13 @@
                 );
             };
 
+            /**
+             * Orchestrates the synthesis of multiple documents into a unified "Workspace" view.
+             * This function merges text from selected PDFs, performs a meta-analysis using the Gemini API,
+             * and generates a combined Mind Map and shared topic list.
+             *
+             * @param {string} mode - The synthesis mode: 'fast' (uses cached text) or 'deep' (re-extracts and analyzes).
+             */
             const processWorkspace = async (mode) => {
                 if (!scriptsLoaded || workspaceSelectedIds.length === 0) return;
 
@@ -2738,6 +2765,16 @@
                 }
             };
 
+            /**
+             * The core ingestion pipeline for a single document.
+             * Stages:
+             * 1. Ingestion: Extracts raw text from the PDF file.
+             * 2. Analysis: Uses Gemini to identify key topics and hierarchical structure.
+             * 3. Rendering: Generates schematic visual assets for each topic.
+             * 4. Complete: Updates the document state with the full knowledge graph.
+             *
+             * @param {string} id - The unique ID of the document to process.
+             */
             const processDocument = async (id) => {
                 if (!scriptsLoaded) {
                     setGlobalError("Core dependencies are initializing. Please wait...");
