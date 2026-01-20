@@ -134,6 +134,24 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
+
+        /* Toast Countdown */
+        @keyframes toast-countdown {
+            from { width: 100%; }
+            to { width: 0%; }
+        }
+        .toast-item:hover .toast-progress {
+            animation-play-state: paused;
+        }
+
+        /* Ripple Animation */
+        @keyframes ripple {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0.5; }
+            100% { transform: translate(-50%, -50%) scale(25); opacity: 0; }
+        }
+        .animate-ripple {
+            animation: ripple 0.6s linear forwards;
+        }
     </style>
 </head>
 
@@ -306,6 +324,13 @@
         };
 
         // PATCH: Improved JSON cleaning logic (Phase 2 Upgrade)
+        /**
+         * Sanitizes raw LLM output to extract valid JSON substrings.
+         * Handles Markdown code blocks and extraneous text to ensure parsing success.
+         *
+         * @param {string} text - The raw string output from the LLM.
+         * @returns {string|null} The cleaned JSON string or raw text if extraction fails.
+         */
         const cleanJson = (text) => {
             if (!text) return null;
             // Step 1: Remove markdown backticks
@@ -807,42 +832,88 @@
         });
 
         // --- TOAST COMPONENT ---
+        const ToastItem = ({ toast, removeToast }) => {
+            return (
+                <div className="toast-item pointer-events-auto relative overflow-hidden backdrop-blur-2xl bg-slate-900/90 text-white px-5 py-4 rounded-xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] ring-1 ring-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] hover:-translate-x-1 transition-all group">
+                    <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
+                        toast.type === 'success' ? 'text-[#34A853]' :
+                        toast.type === 'error' ? 'text-[#EA4335]' :
+                        toast.type === 'warning' ? 'text-[#FBBC05]' :
+                        'text-[#4285F4]'
+                    }`}>
+                        {toast.type === 'success' && <CheckCircle size={16} />}
+                        {toast.type === 'info' && <Info size={16} />}
+                        {toast.type === 'error' && <AlertTriangle size={16} />}
+                        {toast.type === 'warning' && <Lock size={16} />}
+                    </div>
+
+                    <div className="flex-1 min-w-0 z-10">
+                        <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize">{toast.type}</h5>
+                        <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
+                    </div>
+
+                    <button
+                        onClick={() => removeToast(toast.id)}
+                        className="text-slate-500 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10 z-10"
+                    >
+                        <X size={16} />
+                    </button>
+
+                    {/* Progress Bar triggering removal on end */}
+                    <div
+                        className="toast-progress absolute bottom-0 left-0 h-[3px] bg-gradient-to-r from-[#4285F4] via-[#EA4335] to-[#FBBC05]"
+                        style={{
+                            width: '100%',
+                            animation: 'toast-countdown 4000ms linear forwards'
+                        }}
+                        onAnimationEnd={() => removeToast(toast.id)}
+                    />
+                </div>
+            );
+        };
+
+        // PATCH: RippleButton for micro-interactions
+        const RippleButton = ({ children, onClick, className = "", ...props }) => {
+            const [ripples, setRipples] = useState([]);
+
+            const handleClick = (e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const id = Date.now();
+                setRipples(prev => [...prev, { x, y, id }]);
+                setTimeout(() => setRipples(prev => prev.filter(r => r.id !== id)), 600);
+                if (onClick) onClick(e);
+            };
+
+            return (
+                <button
+                    className={`relative overflow-hidden ${className}`}
+                    onClick={handleClick}
+                    {...props}
+                >
+                    <span className="relative z-10 flex items-center justify-center gap-2 w-full h-full pointer-events-none">{children}</span>
+                    {ripples.map(r => (
+                        <span
+                            key={r.id}
+                            className="absolute bg-white/30 rounded-full pointer-events-none animate-ripple"
+                            style={{
+                                left: r.x,
+                                top: r.y,
+                                transform: 'translate(-50%, -50%)',
+                                width: '20px',
+                                height: '20px'
+                            }}
+                        />
+                    ))}
+                </button>
+            );
+        };
+
         const ToastContainer = ({ toasts, removeToast }) => (
             <div className="fixed bottom-6 right-6 z-[200000] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
                 {toasts.map(toast => (
-                    <div
-                        key={toast.id}
-                        className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
-                    >
-                        <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
-                            toast.type === 'success' ? 'text-[#34A853]' :
-                            toast.type === 'error' ? 'text-[#EA4335]' :
-                            toast.type === 'warning' ? 'text-[#FBBC05]' :
-                            'text-[#4285F4]'
-                        }`}>
-                            {toast.type === 'success' && <CheckCircle size={16} />}
-                            {toast.type === 'info' && <Info size={16} />}
-                            {toast.type === 'error' && <AlertTriangle size={16} />}
-                            {toast.type === 'warning' && <Lock size={16} />}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize">{toast.type}</h5>
-                            <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
-                        </div>
-
-                        <button
-                            onClick={() => removeToast(toast.id)}
-                            className="text-slate-500 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
-                        >
-                            <X size={16} />
-                        </button>
-
-                        {/* Progress Bar for Auto-Dismiss Visual */}
-                        <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white/10 rounded-full overflow-hidden">
-                             <div className="h-full bg-gradient-to-r from-transparent via-white/50 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
-                        </div>
-                    </div>
+                    <ToastItem key={toast.id} toast={toast} removeToast={removeToast} />
                 ))}
             </div>
         );
@@ -1846,6 +1917,12 @@
 
             const handleSpeedChange = (rate) => { setPlaybackRate(rate); if (audioRef.current) audioRef.current.playbackRate = rate; };
 
+            /**
+             * Captures the current video canvas and audio stream to export a WebM video file.
+             * Performs frame-by-frame rendering to ensure visual consistency and handles audio synchronization.
+             *
+             * @returns {Promise<void>} Triggers a browser download of the generated .webm file.
+             */
             const handleDownloadVideo = async () => {
                 if (!currentTopicAssets || isRenderingVideo) return;
                 setIsRenderingVideo(true); setShowSettings(false);
@@ -2010,9 +2087,9 @@
 
                                 <div className="p-6 border-t border-slate-800 bg-slate-950 flex justify-end gap-3">
                                     <button onClick={() => setShowStyleModal(false)} className="px-6 py-3 rounded-lg font-bold text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">Cancel</button>
-                                    <button onClick={handleStyleConfirm} className="px-8 py-3 rounded-lg font-bold bg-[#4285F4] hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20 transition-all transform active:scale-95 flex items-center gap-2">
+                                    <RippleButton onClick={handleStyleConfirm} className="px-8 py-3 rounded-lg font-bold bg-[#4285F4] hover:bg-blue-600 text-white shadow-lg shadow-blue-900/20 transition-all transform active:scale-95 flex items-center gap-2">
                                         <Lock size={16} /> Confirm & Generate
-                                    </button>
+                                    </RippleButton>
                                 </div>
                             </div>
                         </div>
@@ -2163,13 +2240,13 @@
                                             <LayoutTemplate className="text-slate-700 w-24 h-24 mx-auto mb-6" />
                                             <h4 className="text-slate-400 font-bold text-lg mb-2">Ready to Film</h4>
                                             <p className="text-slate-500 text-sm mb-8">Generate {language === 'hinglish' ? 'Desi' : 'Global'} Version</p>
-                                            <button
+                                            <RippleButton
                                                 onClick={togglePlay}
                                                 disabled={!scriptsLoaded}
                                                 className={`px-10 py-4 bg-gradient-to-r from-[#4285F4] to-[#1a73e8] text-white rounded-full font-bold text-lg shadow-lg hover:shadow-blue-900/50 transition-all hover:scale-105 border border-blue-500/30 ${!scriptsLoaded ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 {scriptsLoaded ? "Generate Video" : "Loading Core..."}
-                                            </button>
+                                            </RippleButton>
                                         </>
                                     )}
                                 </div>
@@ -2383,14 +2460,14 @@
                                             <div className="w-20 h-20 bg-[#34A853] rounded-full flex items-center justify-center text-slate-900"><Download size={40} /></div>
                                             <div><h3 className="text-3xl font-bold">Export Package</h3><p className="text-slate-400 text-lg">Download high-fidelity assets.</p></div>
                                         </div>
-                                        <button
+                                        <RippleButton
                                             onClick={handleDownloadFullPackage}
                                             disabled={!scriptsLoaded}
                                             className={`px-10 py-4 bg-slate-700 hover:bg-[#34A853] text-white rounded-xl border-2 border-slate-600 font-mono font-bold text-lg transition-all hover:scale-105 flex items-center gap-3 ${isZipDownloading ? 'shadow-[0_0_30px_#34A853] animate-pulse border-[#34A853]' : ''} ${!scriptsLoaded ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {isZipDownloading ? <Loader2 className="animate-spin" size={24} /> : <Package size={24} />}
                                             {isZipDownloading ? "COMPRESSING..." : "DOWNLOAD .ZIP"}
-                                        </button>
+                                        </RippleButton>
                                     </div>
                                 </div>
                             </div>
@@ -2479,7 +2556,6 @@
             const showToast = useCallback((message, type = 'info') => {
                 const id = Date.now() + Math.random();
                 setToasts(prev => [...prev, { id, message, type }]);
-                setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
             }, []);
             const removeToast = useCallback((id) => setToasts(prev => prev.filter(t => t.id !== id)), []);
 
@@ -2633,6 +2709,15 @@
                 );
             };
 
+            /**
+             * Aggregates multiple selected documents into a single "Workspace" entity for meta-analysis.
+             * It merges text content, generates a unified mind map, and synthesizes cross-document topics.
+             *
+             * @param {('fast'|'deep')} mode - The processing mode:
+             *   - 'fast': Uses existing extracted text from documents.
+             *   - 'deep': Re-scans and re-extracts text (useful for error correction).
+             * @returns {Promise<void>} Updates the 'WORKSPACE' document state.
+             */
             const processWorkspace = async (mode) => {
                 if (!scriptsLoaded || workspaceSelectedIds.length === 0) return;
 
@@ -2738,6 +2823,13 @@
                 }
             };
 
+            /**
+             * Orchestrates the individual document ingestion pipeline.
+             * Stages: Ingestion (PDF extraction) -> Analysis (Topic extraction) -> Mapping (Structure generation) -> Rendering.
+             *
+             * @param {string} id - The unique UUID of the document to process.
+             * @returns {Promise<void>} Updates the document's state through its lifecycle.
+             */
             const processDocument = async (id) => {
                 if (!scriptsLoaded) {
                     setGlobalError("Core dependencies are initializing. Please wait...");
@@ -3060,13 +3152,13 @@
                                             <h2 className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeDoc.file.name}</h2>
                                         </div>
                                         {activeDoc.status === 'idle' && activeDoc.id !== 'WORKSPACE' && (
-                                            <button
+                                            <RippleButton
                                                 onClick={() => processDocument(activeDoc.id)}
                                                 disabled={!scriptsLoaded || processingRef.current.has(activeDoc.id)}
                                                 className={`px-8 py-3 bg-[#4285F4] hover:bg-blue-600 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 active:scale-95 transition-transform ${!scriptsLoaded || processingRef.current.has(activeDoc.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <Cpu size={20} /> {scriptsLoaded ? "Initialize Processing" : "Loading Dependencies..."}
-                                            </button>
+                                            </RippleButton>
                                         )}
                                         {activeDoc.id === 'WORKSPACE' && activeDoc.status === 'idle' && (
                                             <div className="text-right">
