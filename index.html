@@ -134,6 +134,15 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
+
+        /* Ripple Animation */
+        @keyframes ripple {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0.5; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        }
+        .animate-ripple {
+            animation: ripple 0.6s linear;
+        }
     </style>
 </head>
 
@@ -463,6 +472,55 @@
             }
         };
 
+        // PHASE 3 UPGRADE: Web Worker for Chunking
+        const CHUNK_WORKER_SCRIPT = `
+        self.onmessage = function(e) {
+            const { text, chunkSize } = e.data;
+            const chunks = [];
+            let startIndex = 0;
+
+            while (startIndex < text.length) {
+                let endIndex = Math.min(startIndex + chunkSize, text.length);
+
+                if (endIndex < text.length) {
+                    const searchWindow = text.substring(startIndex, endIndex);
+                    let breakPoint = -1;
+                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                        const char = searchWindow[i];
+                        if (char === '.' || char === '?' || char === '!') {
+                            breakPoint = i + 1;
+                            break;
+                        }
+                    }
+
+                    if (breakPoint === -1) {
+                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                            if (searchWindow[i] === ' ') {
+                                breakPoint = i + 1;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (breakPoint === -1 || breakPoint === 0) {
+                        breakPoint = searchWindow.length;
+                    }
+
+                    endIndex = startIndex + breakPoint;
+                }
+
+                const chunk = text.substring(startIndex, endIndex).trim();
+                if (chunk.length > 0) {
+                    chunks.push(chunk);
+                }
+
+                startIndex = endIndex;
+            }
+
+            self.postMessage({ chunks });
+        };
+        `;
+
         /**
          * Recursively processes large text inputs by splitting them into semantically meaningful chunks
          * (respecting sentence boundaries) and summarizing them in parallel using the Gemini API.
@@ -476,77 +534,46 @@
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
 
-            // PHASE 3: Semantic chunking - split at sentence boundaries
-            const chunks = [];
-            let startIndex = 0;
+            log(`[Infinite PDF] Offloading chunking to worker: ${text.length} chars`);
 
-            while (startIndex < text.length) {
-                // Calculate the ideal end position
-                let endIndex = Math.min(startIndex + chunkSize, text.length);
+            const blob = new Blob([CHUNK_WORKER_SCRIPT], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            const worker = new Worker(workerUrl);
 
-                // If we're not at the end of the text, find a good break point
-                if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
-                    const searchWindow = text.substring(startIndex, endIndex);
-
-                    // Find last period, question mark, or exclamation mark
-                    let breakPoint = -1;
-                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
-                        const char = searchWindow[i];
-                        if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
-                            break;
-                        }
-                    }
-
-                    // If no punctuation found, look for last space
-                    if (breakPoint === -1) {
-                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
-                            if (searchWindow[i] === ' ') {
-                                breakPoint = i + 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
-                    if (breakPoint === -1 || breakPoint === 0) {
-                        breakPoint = searchWindow.length;
-                    }
-
-                    endIndex = startIndex + breakPoint;
-                }
-
-                // Extract the chunk and add it
-                const chunk = text.substring(startIndex, endIndex).trim();
-                if (chunk.length > 0) {
-                    chunks.push(chunk);
-                }
-
-                // CRITICAL: Always advance startIndex to prevent infinite loop
-                startIndex = endIndex;
-            }
-
-            log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
-
-            // OPTIMIZATION: Parallel processing with Promise.all
-            const summaryPromises = chunks.map(chunk => {
-                const prompt = `You are a precise academic summarizer. Summarize this text into exactly 5 key bullet points. Be concise and factual:\n\n${chunk}`;
-                return generateContent(prompt).then(res => {
-                    const summary = res.candidates?.[0]?.content?.parts?.[0]?.text || "";
-                    return summary;
-                }).catch(err => {
-                    console.warn("[Chunk Summary Failed]", err);
-                    return "• [Summary unavailable for this section]";
+            try {
+                const chunks = await new Promise((resolve, reject) => {
+                    worker.onmessage = (e) => resolve(e.data.chunks);
+                    worker.onerror = (e) => reject(e);
+                    worker.postMessage({ text, chunkSize });
                 });
-            });
 
-            const summaries = await Promise.all(summaryPromises);
-            const masterContext = summaries.join("\n\n--- SECTION BREAK ---\n\n");
+                log(`[Infinite PDF] Worker returned ${chunks.length} chunks`);
 
-            log(`[Infinite PDF] Created master context: ${masterContext.length} chars from ${chunks.length} summaries`);
-            return masterContext;
+                // OPTIMIZATION: Parallel processing with Promise.all
+                const summaryPromises = chunks.map(chunk => {
+                    const prompt = `You are a precise academic summarizer. Summarize this text into exactly 5 key bullet points. Be concise and factual:\n\n${chunk}`;
+                    return generateContent(prompt).then(res => {
+                        const summary = res.candidates?.[0]?.content?.parts?.[0]?.text || "";
+                        return summary;
+                    }).catch(err => {
+                        console.warn("[Chunk Summary Failed]", err);
+                        return "• [Summary unavailable for this section]";
+                    });
+                });
+
+                const summaries = await Promise.all(summaryPromises);
+                const masterContext = summaries.join("\n\n--- SECTION BREAK ---\n\n");
+
+                log(`[Infinite PDF] Created master context: ${masterContext.length} chars from ${chunks.length} summaries`);
+                return masterContext;
+
+            } catch (e) {
+                console.error("Worker chunking failed", e);
+                return text.substring(0, 50000); // Fallback to truncation
+            } finally {
+                worker.terminate();
+                URL.revokeObjectURL(workerUrl);
+            }
         };
 
         const extractTextFromPDF = async (file) => {
@@ -806,43 +833,133 @@
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
         });
 
+        // --- RIPPLE BUTTON ---
+        const RippleButton = ({ children, onClick, className, ...props }) => {
+            const [ripples, setRipples] = useState([]);
+
+            const handleClick = (e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const id = Date.now();
+
+                setRipples(prev => [...prev, { x, y, id }]);
+                if (onClick) onClick(e);
+            };
+
+            const handleAnimationEnd = (id) => {
+                setRipples(prev => prev.filter(r => r.id !== id));
+            };
+
+            return (
+                <button
+                    className={`relative overflow-hidden ${className}`}
+                    onClick={handleClick}
+                    {...props}
+                >
+                    {children}
+                    {ripples.map(ripple => (
+                        <span
+                            key={ripple.id}
+                            className="absolute bg-white rounded-full animate-ripple pointer-events-none"
+                            style={{
+                                left: ripple.x,
+                                top: ripple.y,
+                                width: 20,
+                                height: 20,
+                                transform: 'translate(-50%, -50%)' // Note: This transform is overridden by keyframe scale
+                            }}
+                            onAnimationEnd={() => handleAnimationEnd(ripple.id)}
+                        />
+                    ))}
+                </button>
+            );
+        };
+
         // --- TOAST COMPONENT ---
+        const ToastItem = ({ toast, removeToast }) => {
+            const [translateX, setTranslateX] = useState(0);
+            const [opacity, setOpacity] = useState(1);
+            const startX = useRef(null);
+
+            const handleTouchStart = (e) => {
+                startX.current = e.touches[0].clientX;
+            };
+
+            const handleTouchMove = (e) => {
+                if (!startX.current) return;
+                const currentX = e.touches[0].clientX;
+                const diff = currentX - startX.current;
+
+                // Only allow swiping right
+                if (diff > 0) {
+                    setTranslateX(diff);
+                    setOpacity(1 - diff / 300); // Fade out as we swipe
+                }
+            };
+
+            const handleTouchEnd = () => {
+                if (translateX > 150) {
+                    // Swipe threshold met
+                    setTranslateX(500); // Fly off screen
+                    setOpacity(0);
+                    setTimeout(() => removeToast(toast.id), 300);
+                } else {
+                    // Reset
+                    setTranslateX(0);
+                    setOpacity(1);
+                }
+                startX.current = null;
+            };
+
+            return (
+                <div
+                    className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group touch-pan-y"
+                    style={{
+                        transform: `translateX(${translateX}px)`,
+                        opacity: opacity,
+                        transition: startX.current ? 'none' : 'transform 0.3s ease, opacity 0.3s ease'
+                    }}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                >
+                    <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
+                        toast.type === 'success' ? 'text-[#34A853]' :
+                        toast.type === 'error' ? 'text-[#EA4335]' :
+                        toast.type === 'warning' ? 'text-[#FBBC05]' :
+                        'text-[#4285F4]'
+                    }`}>
+                        {toast.type === 'success' && <CheckCircle size={16} />}
+                        {toast.type === 'info' && <Info size={16} />}
+                        {toast.type === 'error' && <AlertTriangle size={16} />}
+                        {toast.type === 'warning' && <Lock size={16} />}
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                        <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize">{toast.type}</h5>
+                        <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
+                    </div>
+
+                    <button
+                        onClick={() => removeToast(toast.id)}
+                        className="text-slate-500 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
+                    >
+                        <X size={16} />
+                    </button>
+
+                    {/* Progress Bar for Auto-Dismiss Visual */}
+                    <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white/10 rounded-full overflow-hidden">
+                             <div className="h-full bg-gradient-to-r from-transparent via-white/50 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
+                    </div>
+                </div>
+            );
+        };
+
         const ToastContainer = ({ toasts, removeToast }) => (
             <div className="fixed bottom-6 right-6 z-[200000] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
                 {toasts.map(toast => (
-                    <div
-                        key={toast.id}
-                        className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
-                    >
-                        <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
-                            toast.type === 'success' ? 'text-[#34A853]' :
-                            toast.type === 'error' ? 'text-[#EA4335]' :
-                            toast.type === 'warning' ? 'text-[#FBBC05]' :
-                            'text-[#4285F4]'
-                        }`}>
-                            {toast.type === 'success' && <CheckCircle size={16} />}
-                            {toast.type === 'info' && <Info size={16} />}
-                            {toast.type === 'error' && <AlertTriangle size={16} />}
-                            {toast.type === 'warning' && <Lock size={16} />}
-                        </div>
-
-                        <div className="flex-1 min-w-0">
-                            <h5 className="font-bold text-sm tracking-wide mb-0.5 capitalize">{toast.type}</h5>
-                            <p className="text-xs text-slate-300 leading-relaxed font-medium">{toast.message}</p>
-                        </div>
-
-                        <button
-                            onClick={() => removeToast(toast.id)}
-                            className="text-slate-500 hover:text-white transition-colors p-1 rounded-md hover:bg-white/10"
-                        >
-                            <X size={16} />
-                        </button>
-
-                        {/* Progress Bar for Auto-Dismiss Visual */}
-                        <div className="absolute bottom-0 left-4 right-4 h-[2px] bg-white/10 rounded-full overflow-hidden">
-                             <div className="h-full bg-gradient-to-r from-transparent via-white/50 to-transparent w-full animate-[shimmer_2s_infinite]"></div>
-                        </div>
-                    </div>
+                    <ToastItem key={toast.id} toast={toast} removeToast={removeToast} />
                 ))}
             </div>
         );
@@ -936,13 +1053,13 @@
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-4 text-white mb-6 focus:outline-none focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] font-mono text-sm transition-all"
                         />
 
-                        <button
+                        <RippleButton
                             onClick={handleSave}
                             disabled={!key.trim()}
                             className="w-full bg-[#4285F4] hover:bg-blue-600 text-white font-bold py-3.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95"
                         >
                             <CheckCircle size={18} /> Authenticate System
-                        </button>
+                        </RippleButton>
                         <div className="flex items-center justify-center gap-2 mt-6 opacity-50 mb-4">
                             <Lock size={12} className="text-slate-500" />
                             <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">End-to-End Local Storage</p>
@@ -2383,14 +2500,14 @@
                                             <div className="w-20 h-20 bg-[#34A853] rounded-full flex items-center justify-center text-slate-900"><Download size={40} /></div>
                                             <div><h3 className="text-3xl font-bold">Export Package</h3><p className="text-slate-400 text-lg">Download high-fidelity assets.</p></div>
                                         </div>
-                                        <button
+                                        <RippleButton
                                             onClick={handleDownloadFullPackage}
                                             disabled={!scriptsLoaded}
                                             className={`px-10 py-4 bg-slate-700 hover:bg-[#34A853] text-white rounded-xl border-2 border-slate-600 font-mono font-bold text-lg transition-all hover:scale-105 flex items-center gap-3 ${isZipDownloading ? 'shadow-[0_0_30px_#34A853] animate-pulse border-[#34A853]' : ''} ${!scriptsLoaded ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {isZipDownloading ? <Loader2 className="animate-spin" size={24} /> : <Package size={24} />}
                                             {isZipDownloading ? "COMPRESSING..." : "DOWNLOAD .ZIP"}
-                                        </button>
+                                        </RippleButton>
                                     </div>
                                 </div>
                             </div>
@@ -2933,14 +3050,14 @@
                                         <input type="file" accept=".pdf" multiple onChange={handleFileChange} className="hidden" />
                                     </label>
                                     {!workspaceEnabled && documents.some(d => d.status === 'idle') && (
-                                        <button
+                                        <RippleButton
                                             onClick={handleProcessAll}
                                             disabled={queueProcessing || !scriptsLoaded}
                                             className={`w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-bold border border-slate-700 flex items-center justify-center gap-2 active:scale-95 transition-transform ${queueProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {queueProcessing ? <Loader2 size={14} className="animate-spin" /> : <Layers size={14} />}
                                             {queueProcessing ? "PROCESSING QUEUE..." : "PROCESS ALL PENDING"}
-                                        </button>
+                                        </RippleButton>
                                     )}
                                 </div>
                             </div>
