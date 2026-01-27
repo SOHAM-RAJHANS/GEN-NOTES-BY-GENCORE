@@ -18,6 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
 
     <style>
         html,
@@ -29,6 +30,10 @@
 
         body {
             font-family: 'Inter', system-ui, sans-serif;
+        }
+
+        .font-display {
+            font-family: 'Rajdhani', sans-serif;
         }
 
         .font-mono {
@@ -472,60 +477,83 @@
          * @param {number} [chunkSize=10000] - The target character count for each chunk (soft limit).
          * @returns {Promise<string>} A concatenated master context string derived from the summaries.
          */
+        const CHUNK_WORKER_SCRIPT = `
+self.onmessage = function(e) {
+    const { text, chunkSize } = e.data;
+    const chunks = [];
+    let startIndex = 0;
+
+    while (startIndex < text.length) {
+        let endIndex = Math.min(startIndex + chunkSize, text.length);
+        if (endIndex < text.length) {
+            const searchWindow = text.substring(startIndex, endIndex);
+            let breakPoint = -1;
+
+            // Look for punctuation (last 500 chars)
+            for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                const char = searchWindow[i];
+                if (char === '.' || char === '?' || char === '!') {
+                    breakPoint = i + 1;
+                    break;
+                }
+            }
+
+            // Look for space (last 200 chars) if no punctuation
+            if (breakPoint === -1) {
+                for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                    if (searchWindow[i] === ' ') {
+                        breakPoint = i + 1;
+                        break;
+                    }
+                }
+            }
+
+            // Hard cut if nothing found
+            if (breakPoint === -1 || breakPoint === 0) {
+                breakPoint = searchWindow.length;
+            }
+
+            endIndex = startIndex + breakPoint;
+        }
+
+        const chunk = text.substring(startIndex, endIndex).trim();
+        if (chunk.length > 0) chunks.push(chunk);
+        startIndex = endIndex;
+    }
+
+    self.postMessage({ chunks });
+};
+`;
+
         const summarizeChunks = async (text, chunkSize = 10000) => {
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
 
-            // PHASE 3: Semantic chunking - split at sentence boundaries
-            const chunks = [];
-            let startIndex = 0;
+            let chunks = [];
 
-            while (startIndex < text.length) {
-                // Calculate the ideal end position
-                let endIndex = Math.min(startIndex + chunkSize, text.length);
+            try {
+                // PHASE 3 UPGRADE: Offload to Blob Worker
+                const blob = new Blob([CHUNK_WORKER_SCRIPT], { type: 'application/javascript' });
+                const blobUrl = URL.createObjectURL(blob);
+                const worker = new Worker(blobUrl);
 
-                // If we're not at the end of the text, find a good break point
-                if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
-                    const searchWindow = text.substring(startIndex, endIndex);
+                chunks = await new Promise((resolve, reject) => {
+                    worker.onmessage = (e) => {
+                        resolve(e.data.chunks);
+                        worker.terminate();
+                        URL.revokeObjectURL(blobUrl);
+                    };
+                    worker.onerror = (e) => {
+                        reject(e);
+                        worker.terminate();
+                        URL.revokeObjectURL(blobUrl);
+                    };
+                    worker.postMessage({ text, chunkSize });
+                });
 
-                    // Find last period, question mark, or exclamation mark
-                    let breakPoint = -1;
-                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
-                        const char = searchWindow[i];
-                        if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
-                            break;
-                        }
-                    }
-
-                    // If no punctuation found, look for last space
-                    if (breakPoint === -1) {
-                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
-                            if (searchWindow[i] === ' ') {
-                                breakPoint = i + 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
-                    if (breakPoint === -1 || breakPoint === 0) {
-                        breakPoint = searchWindow.length;
-                    }
-
-                    endIndex = startIndex + breakPoint;
-                }
-
-                // Extract the chunk and add it
-                const chunk = text.substring(startIndex, endIndex).trim();
-                if (chunk.length > 0) {
-                    chunks.push(chunk);
-                }
-
-                // CRITICAL: Always advance startIndex to prevent infinite loop
-                startIndex = endIndex;
+            } catch (e) {
+                console.error("Worker Chunking Failed", e);
+                return "Error: Chunking Worker Failed.";
             }
 
             log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
@@ -1045,7 +1073,7 @@
         const Header = ({ darkMode, setDarkMode, layoutMode, setLayoutMode, sidebarOpen, setSidebarOpen, onLogout }) => (
             <header className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#4285F4]'} text-slate-900 p-4 pl-6 shadow-xl border-b-2 sticky top-0 z-50 transition-colors duration-300 flex justify-between items-center`}>
                 <div className="flex items-center gap-8">
-                    <h1 className={`text-3xl font-extrabold tracking-tighter flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    <h1 className={`text-3xl font-extrabold font-display tracking-tighter flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         {/* PATCH: Added sidebar toggle button */}
                         <button
                             onClick={() => setSidebarOpen(!sidebarOpen)}
