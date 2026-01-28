@@ -18,6 +18,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
         html,
@@ -31,8 +32,24 @@
             font-family: 'Inter', system-ui, sans-serif;
         }
 
+        .font-display {
+            font-family: 'Rajdhani', sans-serif;
+        }
+
         .font-mono {
             font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Ripple Animation */
+        @keyframes ripple {
+            to {
+                transform: translate(-50%, -50%) scale(4);
+                opacity: 0;
+            }
+        }
+
+        .animate-ripple {
+            animation: ripple 0.6s linear;
         }
 
         .scrollbar-thin::-webkit-scrollbar {
@@ -463,6 +480,55 @@
             }
         };
 
+        // PHASE 3: Blob Worker for Text Chunking (Optimized to prevent UI blocking)
+        const CHUNK_WORKER_SCRIPT = `
+            self.onmessage = function(e) {
+                const { text, chunkSize } = e.data;
+                const chunks = [];
+                let startIndex = 0;
+
+                while (startIndex < text.length) {
+                    let endIndex = Math.min(startIndex + chunkSize, text.length);
+
+                    if (endIndex < text.length) {
+                        const searchWindow = text.substring(startIndex, endIndex);
+                        let breakPoint = -1;
+
+                        // Priority 1: Sentence boundaries (within last 500 chars)
+                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                            const char = searchWindow[i];
+                            if (char === '.' || char === '?' || char === '!') {
+                                breakPoint = i + 1;
+                                break;
+                            }
+                        }
+
+                        // Priority 2: Space boundaries (within last 200 chars)
+                        if (breakPoint === -1) {
+                            for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                                if (searchWindow[i] === ' ') {
+                                    breakPoint = i + 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        // Priority 3: Hard cut (prevent infinite loop)
+                        if (breakPoint === -1 || breakPoint === 0) {
+                            breakPoint = searchWindow.length;
+                        }
+
+                        endIndex = startIndex + breakPoint;
+                    }
+
+                    const chunk = text.substring(startIndex, endIndex).trim();
+                    if (chunk.length > 0) chunks.push(chunk);
+                    startIndex = endIndex;
+                }
+                self.postMessage(chunks);
+            };
+        `;
+
         /**
          * Recursively processes large text inputs by splitting them into semantically meaningful chunks
          * (respecting sentence boundaries) and summarizing them in parallel using the Gemini API.
@@ -476,59 +542,25 @@
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
 
-            // PHASE 3: Semantic chunking - split at sentence boundaries
-            const chunks = [];
-            let startIndex = 0;
+            log(`[Infinite PDF] Offloading chunking to Blob Worker for ${text.length} chars`);
 
-            while (startIndex < text.length) {
-                // Calculate the ideal end position
-                let endIndex = Math.min(startIndex + chunkSize, text.length);
+            // Create Worker
+            const blob = new Blob([CHUNK_WORKER_SCRIPT], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            const worker = new Worker(workerUrl);
 
-                // If we're not at the end of the text, find a good break point
-                if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
-                    const searchWindow = text.substring(startIndex, endIndex);
+            // Promisify Worker
+            const chunks = await new Promise((resolve, reject) => {
+                worker.onmessage = (e) => resolve(e.data);
+                worker.onerror = (e) => reject(e);
+                worker.postMessage({ text, chunkSize });
+            });
 
-                    // Find last period, question mark, or exclamation mark
-                    let breakPoint = -1;
-                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
-                        const char = searchWindow[i];
-                        if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
-                            break;
-                        }
-                    }
+            // Cleanup
+            worker.terminate();
+            URL.revokeObjectURL(workerUrl);
 
-                    // If no punctuation found, look for last space
-                    if (breakPoint === -1) {
-                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
-                            if (searchWindow[i] === ' ') {
-                                breakPoint = i + 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
-                    if (breakPoint === -1 || breakPoint === 0) {
-                        breakPoint = searchWindow.length;
-                    }
-
-                    endIndex = startIndex + breakPoint;
-                }
-
-                // Extract the chunk and add it
-                const chunk = text.substring(startIndex, endIndex).trim();
-                if (chunk.length > 0) {
-                    chunks.push(chunk);
-                }
-
-                // CRITICAL: Always advance startIndex to prevent infinite loop
-                startIndex = endIndex;
-            }
-
-            log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
+            log(`[Infinite PDF] Worker returned ${chunks.length} chunks`);
 
             // OPTIMIZATION: Parallel processing with Promise.all
             const summaryPromises = chunks.map(chunk => {
@@ -1040,20 +1072,71 @@
             );
         };
 
+        // --- RIPPLE BUTTON COMPONENT ---
+        const RippleButton = ({ children, onClick, className = "", ...props }) => {
+            const [ripples, setRipples] = useState([]);
+
+            const addRipple = (event) => {
+                const button = event.currentTarget;
+                const rect = button.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+
+                const newRipple = { x, y, size, id: Date.now() };
+                setRipples(prev => [...prev, newRipple]);
+            };
+
+            useEffect(() => {
+                const timer = setTimeout(() => setRipples([]), 1000);
+                return () => clearTimeout(timer);
+            }, [ripples]);
+
+            return (
+                <button
+                    onClick={(e) => {
+                        addRipple(e);
+                        onClick && onClick(e);
+                    }}
+                    className={`relative overflow-hidden isolate ${className}`}
+                    {...props}
+                >
+                    {children}
+                    {ripples.map(r => (
+                        <span
+                            key={r.id}
+                            style={{
+                                top: r.y,
+                                left: r.x,
+                                width: r.size,
+                                height: r.size,
+                                position: 'absolute',
+                                borderRadius: '50%',
+                                backgroundColor: 'rgba(255, 255, 255, 0.3)',
+                                pointerEvents: 'none',
+                                transform: 'translate(-50%, -50%) scale(0)',
+                                animation: 'ripple 0.6s linear forwards'
+                            }}
+                        />
+                    ))}
+                </button>
+            );
+        };
+
         // PATCH: Updated Header to accept sidebar control props
         // PATCH: Added onLogout prop support
         const Header = ({ darkMode, setDarkMode, layoutMode, setLayoutMode, sidebarOpen, setSidebarOpen, onLogout }) => (
             <header className={`${darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-[#4285F4]'} text-slate-900 p-4 pl-6 shadow-xl border-b-2 sticky top-0 z-50 transition-colors duration-300 flex justify-between items-center`}>
                 <div className="flex items-center gap-8">
-                    <h1 className={`text-3xl font-extrabold tracking-tighter flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+            <h1 className={`text-3xl font-display font-bold tracking-tight flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         {/* PATCH: Added sidebar toggle button */}
-                        <button
+                        <RippleButton
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
                             title={sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
                         >
                             <PanelLeft size={24} />
-                        </button>
+                        </RippleButton>
                         Gen<span className="text-[#4285F4]">Notes</span>
                         <span className={`text-[10px] px-2 py-1 rounded font-mono tracking-widest border flex items-center gap-1 ${darkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                             <Sparkles size={10} className="text-[#FBBC05]" /> Gemini Core
@@ -2335,7 +2418,7 @@
                             {isFlow && (
                                 <div className="flex items-center gap-4 mb-8">
                                     <GitGraph size={40} className="text-[#EA4335]" />
-                                    <h2 className={`text-5xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Strategic Network Map</h2>
+                                    <h2 className={`text-5xl font-display font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Strategic Network Map</h2>
                                 </div>
                             )}
                             <div className="flex-1 min-h-0 relative">
@@ -2351,7 +2434,7 @@
                             {isFlow && (
                                 <div className="flex items-center gap-4 mb-12">
                                     <FileText size={40} className="text-[#4285F4]" />
-                                    <h2 className={`text-5xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Executive Synthesis</h2>
+                                    <h2 className={`text-5xl font-display font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Executive Synthesis</h2>
                                 </div>
                             )}
                             <div className={`${isFlow ? 'flex flex-col xl:flex-row gap-12' : 'flex flex-col gap-6'}`}>
@@ -2482,6 +2565,23 @@
                 setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 4000);
             }, []);
             const removeToast = useCallback((id) => setToasts(prev => prev.filter(t => t.id !== id)), []);
+
+            // PATCH: Keyboard Shortcuts
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+                        e.preventDefault();
+                        setSidebarOpen(prev => !prev);
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+                        e.preventDefault();
+                        setLayoutMode('focus');
+                        showToast("Focus Mode Activated", "info");
+                    }
+                };
+                window.addEventListener('keydown', handleKeyDown);
+                return () => window.removeEventListener('keydown', handleKeyDown);
+            }, [showToast, setLayoutMode]);
 
             useEffect(() => {
                 // PATCHED: Security Warning on mount
@@ -2633,6 +2733,13 @@
                 );
             };
 
+            /**
+             * Aggregates selected documents into a single "Workspace" entity.
+             * Extracts text from all selected PDFs, creates a master context,
+             * and uses the AI to generate a synthesized mind map and topic list.
+             *
+             * @param {string} mode - 'fast' (use existing text) or 'deep' (re-scan PDFs).
+             */
             const processWorkspace = async (mode) => {
                 if (!scriptsLoaded || workspaceSelectedIds.length === 0) return;
 
@@ -2738,6 +2845,13 @@
                 }
             };
 
+            /**
+             * Ingests a single PDF document.
+             * Handles text extraction (via PDF.js), semantic chunking (via Worker),
+             * topic analysis (Gemini), and mind map generation.
+             *
+             * @param {string} id - The UUID of the document to process.
+             */
             const processDocument = async (id) => {
                 if (!scriptsLoaded) {
                     setGlobalError("Core dependencies are initializing. Please wait...");
@@ -3057,7 +3171,7 @@
                                                 </span>
                                                 <span className="text-slate-500 text-xs font-mono">{activeDoc.id.slice(0, 8).toUpperCase()}</span>
                                             </div>
-                                            <h2 className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeDoc.file.name}</h2>
+                                    <h2 className={`text-4xl font-display font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeDoc.file.name}</h2>
                                         </div>
                                         {activeDoc.status === 'idle' && activeDoc.id !== 'WORKSPACE' && (
                                             <button
