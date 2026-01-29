@@ -87,11 +87,11 @@
             border-style: solid;
         }
 
-        /* Crisp Panel Override */
+        /* Crisp Panel Override - Glassmorphism 3.0 */
         .crisp-panel {
-            backdrop-filter: none !important;
-            background-color: rgba(15, 23, 42, 0.95) !important;
-            /* Slate 900 equivalent */
+            backdrop-filter: blur(24px) !important;
+            background-color: rgba(15, 23, 42, 0.6) !important;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         /* PATCH: Kinetic Mind Map - Breathing Animation */
@@ -133,6 +133,15 @@
         @keyframes shimmer {
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
+        }
+
+        /* PATCH: Ripple Animation */
+        @keyframes ripple {
+            0% { transform: translate(-50%, -50%) scale(0); opacity: 0.5; }
+            100% { transform: translate(-50%, -50%) scale(4); opacity: 0; }
+        }
+        .animate-ripple {
+            animation: ripple 0.6s linear;
         }
     </style>
 </head>
@@ -463,43 +472,30 @@
             }
         };
 
-        /**
-         * Recursively processes large text inputs by splitting them into semantically meaningful chunks
-         * (respecting sentence boundaries) and summarizing them in parallel using the Gemini API.
-         * This enables the handling of "Infinite PDFs" that exceed the model's token limit.
-         *
-         * @param {string} text - The full raw text content to be summarized.
-         * @param {number} [chunkSize=10000] - The target character count for each chunk (soft limit).
-         * @returns {Promise<string>} A concatenated master context string derived from the summaries.
-         */
-        const summarizeChunks = async (text, chunkSize = 10000) => {
-            // If text is under threshold, no chunking needed
-            if (text.length <= 15000) return text;
-
-            // PHASE 3: Semantic chunking - split at sentence boundaries
+        // PHASE 3 UPGRADE: Blob Worker Script for Non-Blocking Chunking
+        const CHUNK_WORKER_SCRIPT = `
+        self.onmessage = function(e) {
+            const { text, chunkSize } = e.data;
             const chunks = [];
             let startIndex = 0;
 
             while (startIndex < text.length) {
-                // Calculate the ideal end position
                 let endIndex = Math.min(startIndex + chunkSize, text.length);
 
-                // If we're not at the end of the text, find a good break point
                 if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
                     const searchWindow = text.substring(startIndex, endIndex);
-
-                    // Find last period, question mark, or exclamation mark
                     let breakPoint = -1;
+
+                    // Look for last sentence-ending punctuation
                     for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
                         const char = searchWindow[i];
                         if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
+                            breakPoint = i + 1;
                             break;
                         }
                     }
 
-                    // If no punctuation found, look for last space
+                    // Fallback to space
                     if (breakPoint === -1) {
                         for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
                             if (searchWindow[i] === ' ') {
@@ -509,8 +505,7 @@
                         }
                     }
 
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
+                    // Hard fallback
                     if (breakPoint === -1 || breakPoint === 0) {
                         breakPoint = searchWindow.length;
                     }
@@ -518,17 +513,48 @@
                     endIndex = startIndex + breakPoint;
                 }
 
-                // Extract the chunk and add it
                 const chunk = text.substring(startIndex, endIndex).trim();
                 if (chunk.length > 0) {
                     chunks.push(chunk);
                 }
 
-                // CRITICAL: Always advance startIndex to prevent infinite loop
                 startIndex = endIndex;
             }
+            self.postMessage({ chunks });
+        };
+        `;
 
-            log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
+        /**
+         * Recursively processes large text inputs by splitting them into semantically meaningful chunks
+         * (respecting sentence boundaries) via a Blob Worker, then summarizing in parallel.
+         *
+         * @param {string} text - The full raw text content to be summarized.
+         * @param {number} [chunkSize=10000] - The target character count for each chunk (soft limit).
+         * @returns {Promise<string>} A concatenated master context string derived from the summaries.
+         */
+        const summarizeChunks = async (text, chunkSize = 10000) => {
+            // If text is under threshold, no chunking needed
+            if (text.length <= 15000) return text;
+
+            log(`[Infinite PDF] Offloading ${text.length} chars to Blob Worker`);
+
+            // Create worker from blob
+            const blob = new Blob([CHUNK_WORKER_SCRIPT], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            const worker = new Worker(workerUrl);
+
+            // Promisify the worker response
+            const chunks = await new Promise((resolve, reject) => {
+                worker.onmessage = (e) => resolve(e.data.chunks);
+                worker.onerror = (e) => reject(e);
+                worker.postMessage({ text, chunkSize });
+            });
+
+            // Cleanup
+            worker.terminate();
+            URL.revokeObjectURL(workerUrl);
+
+            log(`[Infinite PDF] Worker returned ${chunks.length} chunks`);
 
             // OPTIMIZATION: Parallel processing with Promise.all
             const summaryPromises = chunks.map(chunk => {
@@ -806,6 +832,50 @@
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
         });
 
+        // --- RIPPLE BUTTON COMPONENT ---
+        const RippleButton = ({ children, onClick, className = "", ...props }) => {
+            const [ripples, setRipples] = useState([]);
+            const isMounted = useRef(true);
+
+            useEffect(() => {
+                isMounted.current = true;
+                return () => { isMounted.current = false; };
+            }, []);
+
+            const handleClick = (e) => {
+                const rect = e.currentTarget.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const id = Date.now();
+
+                setRipples(prev => [...prev, { x, y, id }]);
+                if (onClick) onClick(e);
+
+                setTimeout(() => {
+                    if (isMounted.current) {
+                        setRipples(prev => prev.filter(r => r.id !== id));
+                    }
+                }, 600);
+            };
+
+            return (
+                <button
+                    className={`relative overflow-hidden ${className}`}
+                    onClick={handleClick}
+                    {...props}
+                >
+                    {children}
+                    {ripples.map(r => (
+                        <span
+                            key={r.id}
+                            className="absolute bg-white/30 rounded-full w-4 h-4 pointer-events-none animate-ripple"
+                            style={{ left: r.x, top: r.y }}
+                        />
+                    ))}
+                </button>
+            );
+        };
+
         // --- TOAST COMPONENT ---
         const ToastContainer = ({ toasts, removeToast }) => (
             <div className="fixed bottom-6 right-6 z-[200000] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
@@ -936,13 +1006,13 @@
                             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-4 text-white mb-6 focus:outline-none focus:border-[#4285F4] focus:ring-1 focus:ring-[#4285F4] font-mono text-sm transition-all"
                         />
 
-                        <button
+                        <RippleButton
                             onClick={handleSave}
                             disabled={!key.trim()}
                             className="w-full bg-[#4285F4] hover:bg-blue-600 text-white font-bold py-3.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-blue-900/20 active:scale-95"
                         >
                             <CheckCircle size={18} /> Authenticate System
-                        </button>
+                        </RippleButton>
                         <div className="flex items-center justify-center gap-2 mt-6 opacity-50 mb-4">
                             <Lock size={12} className="text-slate-500" />
                             <p className="text-[10px] text-slate-500 font-mono uppercase tracking-widest">End-to-End Local Storage</p>
@@ -3060,13 +3130,13 @@
                                             <h2 className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeDoc.file.name}</h2>
                                         </div>
                                         {activeDoc.status === 'idle' && activeDoc.id !== 'WORKSPACE' && (
-                                            <button
+                                            <RippleButton
                                                 onClick={() => processDocument(activeDoc.id)}
                                                 disabled={!scriptsLoaded || processingRef.current.has(activeDoc.id)}
                                                 className={`px-8 py-3 bg-[#4285F4] hover:bg-blue-600 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 active:scale-95 transition-transform ${!scriptsLoaded || processingRef.current.has(activeDoc.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <Cpu size={20} /> {scriptsLoaded ? "Initialize Processing" : "Loading Dependencies..."}
-                                            </button>
+                                            </RippleButton>
                                         )}
                                         {activeDoc.id === 'WORKSPACE' && activeDoc.status === 'idle' && (
                                             <div className="text-right">
