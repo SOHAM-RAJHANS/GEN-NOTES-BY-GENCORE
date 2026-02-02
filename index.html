@@ -134,6 +134,15 @@
             0% { transform: translateX(-100%); }
             100% { transform: translateX(100%); }
         }
+
+        /* Ripple Animation */
+        @keyframes ripple {
+            0% { transform: scale(0); opacity: 0.5; }
+            100% { transform: scale(4); opacity: 0; }
+        }
+        .animate-ripple {
+            animation: ripple 0.6s linear;
+        }
     </style>
 </head>
 
@@ -806,13 +815,60 @@
             return <canvas ref={canvasRef} style={{ position: 'fixed', inset: 0, pointerEvents: 'none', zIndex: 0 }} />;
         });
 
+        // --- RIPPLE BUTTON COMPONENT ---
+        const RippleButton = ({ children, onClick, className = "", ...props }) => {
+            const [ripples, setRipples] = useState([]);
+
+            useEffect(() => {
+                const timeouts = ripples.map(r => setTimeout(() => {
+                    setRipples(prevState => prevState.filter(ripple => ripple.id !== r.id));
+                }, 600));
+                return () => timeouts.forEach(clearTimeout);
+            }, [ripples]);
+
+            const createRipple = (event) => {
+                const button = event.currentTarget;
+                const rect = button.getBoundingClientRect();
+                const size = Math.max(rect.width, rect.height);
+                const x = event.clientX - rect.left - size / 2;
+                const y = event.clientY - rect.top - size / 2;
+
+                const newRipple = { x, y, size, id: Date.now() };
+                setRipples(prev => [...prev, newRipple]);
+
+                if (onClick) onClick(event);
+            };
+
+            return (
+                <button
+                    className={`relative overflow-hidden ${className}`}
+                    onClick={createRipple}
+                    {...props}
+                >
+                    {children}
+                    {ripples.map((ripple) => (
+                        <span
+                            key={ripple.id}
+                            className="absolute bg-white/30 rounded-full pointer-events-none animate-ripple"
+                            style={{
+                                top: ripple.y,
+                                left: ripple.x,
+                                width: ripple.size,
+                                height: ripple.size,
+                            }}
+                        />
+                    ))}
+                </button>
+            );
+        };
+
         // --- TOAST COMPONENT ---
         const ToastContainer = ({ toasts, removeToast }) => (
             <div className="fixed bottom-6 right-6 z-[200000] flex flex-col gap-3 pointer-events-none max-w-sm w-full">
                 {toasts.map(toast => (
                     <div
                         key={toast.id}
-                        className="pointer-events-auto backdrop-blur-xl bg-slate-900/80 text-white px-5 py-4 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.5)] border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
+                        className="pointer-events-auto backdrop-blur-2xl bg-slate-900/60 text-white px-5 py-4 rounded-xl shadow-2xl shadow-black/50 border border-white/10 flex items-start gap-4 animate-in slide-in-from-right-full fade-in duration-500 ease-out hover:scale-[1.02] transition-transform group"
                     >
                         <div className={`mt-0.5 p-1.5 rounded-full bg-white/5 border border-white/10 shrink-0 shadow-inner ${
                             toast.type === 'success' ? 'text-[#34A853]' :
@@ -1047,13 +1103,13 @@
                 <div className="flex items-center gap-8">
                     <h1 className={`text-3xl font-extrabold tracking-tighter flex items-center gap-3 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                         {/* PATCH: Added sidebar toggle button */}
-                        <button
+                        <RippleButton
                             onClick={() => setSidebarOpen(!sidebarOpen)}
                             className={`p-1.5 rounded-lg transition-colors ${darkMode ? 'hover:bg-slate-800 text-slate-400 hover:text-white' : 'hover:bg-slate-100 text-slate-500 hover:text-slate-900'}`}
                             title={sidebarOpen ? "Close Sidebar" : "Open Sidebar"}
                         >
                             <PanelLeft size={24} />
-                        </button>
+                        </RippleButton>
                         Gen<span className="text-[#4285F4]">Notes</span>
                         <span className={`text-[10px] px-2 py-1 rounded font-mono tracking-widest border flex items-center gap-1 ${darkMode ? 'bg-slate-800 text-slate-300 border-slate-700' : 'bg-slate-100 text-slate-600 border-slate-200'}`}>
                             <Sparkles size={10} className="text-[#FBBC05]" /> Gemini Core
@@ -1065,13 +1121,13 @@
                 </div>
                 <div className="flex items-center gap-4">
                     {/* PATCH: Session Reset Button - Direct Action */}
-                    <button
+                    <RippleButton
                         onClick={onLogout}
                         className="p-2 rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white transition-all border border-red-500/30"
                         title="Terminate Session & Reset"
                     >
                         <LogOut size={18} />
-                    </button>
+                    </RippleButton>
 
                     <CandleToggle darkMode={darkMode} setDarkMode={setDarkMode} />
                     <div className={`flex items-center space-x-2 text-xs font-mono px-4 py-2 rounded-full border ${darkMode ? 'bg-slate-800 text-[#34A853] border-slate-700' : 'bg-slate-100 text-[#34A853] border-slate-200'}`}>
@@ -2100,7 +2156,7 @@
                                     <div className="bg-slate-950/90 backdrop-blur p-4 text-white flex flex-col gap-2 z-50 border-t border-slate-800 absolute bottom-0 left-0 right-0">
                                         <div className="flex justify-between items-center mt-2">
                                             <div className="flex items-center gap-6">
-                                                <button onClick={togglePlay} className="hover:text-[#4285F4] transition-colors transform hover:scale-110">{isPlaying ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" />}</button>
+                                                <RippleButton onClick={togglePlay} className="hover:text-[#4285F4] transition-colors transform hover:scale-110">{isPlaying ? <Pause size={32} fill="white" /> : <Play size={32} fill="white" />}</RippleButton>
                                                 <div className="flex flex-col">
                                                     <h4 className="font-bold text-lg truncate max-w-[400px] text-slate-100 drop-shadow-md">{selectedTopic.title}</h4>
                                                     <p className="text-xs text-[#FBBC05] font-mono uppercase tracking-widest font-bold">Part {currentSegmentIdx + 1}/3</p>
@@ -2108,7 +2164,7 @@
                                             </div>
                                             <div className="flex items-center gap-4 relative">
                                                 <div className="relative">
-                                                    <button onClick={() => setShowSettings(!showSettings)} className={`hover:text-[#4285F4] transition-colors p-2 rounded-full ${showSettings ? 'bg-white/10 text-[#4285F4]' : 'text-slate-300'}`}><Settings size={24} /></button>
+                                                    <RippleButton onClick={() => setShowSettings(!showSettings)} className={`hover:text-[#4285F4] transition-colors p-2 rounded-full ${showSettings ? 'bg-white/10 text-[#4285F4]' : 'text-slate-300'}`}><Settings size={24} /></RippleButton>
                                                     {showSettings && (
                                                         <div className="absolute bottom-16 right-0 bg-slate-900/90 backdrop-blur-md border border-slate-700 rounded-xl p-5 shadow-2xl w-64 z-50 animate-in slide-in-from-bottom-4">
                                                             <h5 className="text-xs font-bold text-slate-400 uppercase mb-4 border-b border-slate-700 pb-2 flex items-center gap-2"><Sliders size={12} /> Control Deck</h5>
@@ -2130,9 +2186,9 @@
                                                         </div>
                                                     )}
                                                 </div>
-                                                <button onClick={toggleFullscreen} className="hover:text-[#4285F4] transition-colors p-2 text-slate-300">
+                                                <RippleButton onClick={toggleFullscreen} className="hover:text-[#4285F4] transition-colors p-2 text-slate-300">
                                                     {(isFullscreen || pseudoFullscreen) ? <Minimize2 size={24} /> : <Maximize2 size={24} />}
-                                                </button>
+                                                </RippleButton>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4 text-xs font-mono text-slate-400">
@@ -2383,14 +2439,14 @@
                                             <div className="w-20 h-20 bg-[#34A853] rounded-full flex items-center justify-center text-slate-900"><Download size={40} /></div>
                                             <div><h3 className="text-3xl font-bold">Export Package</h3><p className="text-slate-400 text-lg">Download high-fidelity assets.</p></div>
                                         </div>
-                                        <button
+                                        <RippleButton
                                             onClick={handleDownloadFullPackage}
                                             disabled={!scriptsLoaded}
                                             className={`px-10 py-4 bg-slate-700 hover:bg-[#34A853] text-white rounded-xl border-2 border-slate-600 font-mono font-bold text-lg transition-all hover:scale-105 flex items-center gap-3 ${isZipDownloading ? 'shadow-[0_0_30px_#34A853] animate-pulse border-[#34A853]' : ''} ${!scriptsLoaded ? 'opacity-50 cursor-not-allowed' : ''}`}
                                         >
                                             {isZipDownloading ? <Loader2 className="animate-spin" size={24} /> : <Package size={24} />}
                                             {isZipDownloading ? "COMPRESSING..." : "DOWNLOAD .ZIP"}
-                                        </button>
+                                        </RippleButton>
                                     </div>
                                 </div>
                             </div>
@@ -2738,6 +2794,15 @@
                 }
             };
 
+            /**
+             * Core pipeline for single document processing.
+             * 1. Extracts text from PDF.
+             * 2. Generates semantic summary (Chunking).
+             * 3. Extracts key topics and mind map structure via Gemini.
+             * 4. Renders schematic blueprints for topics.
+             *
+             * @param {string} id - The unique document ID to process.
+             */
             const processDocument = async (id) => {
                 if (!scriptsLoaded) {
                     setGlobalError("Core dependencies are initializing. Please wait...");
@@ -3060,13 +3125,13 @@
                                             <h2 className={`text-4xl font-extrabold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{activeDoc.file.name}</h2>
                                         </div>
                                         {activeDoc.status === 'idle' && activeDoc.id !== 'WORKSPACE' && (
-                                            <button
+                                            <RippleButton
                                                 onClick={() => processDocument(activeDoc.id)}
                                                 disabled={!scriptsLoaded || processingRef.current.has(activeDoc.id)}
                                                 className={`px-8 py-3 bg-[#4285F4] hover:bg-blue-600 text-white rounded-lg font-bold shadow-lg flex items-center gap-2 active:scale-95 transition-transform ${!scriptsLoaded || processingRef.current.has(activeDoc.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
                                             >
                                                 <Cpu size={20} /> {scriptsLoaded ? "Initialize Processing" : "Loading Dependencies..."}
-                                            </button>
+                                            </RippleButton>
                                         )}
                                         {activeDoc.id === 'WORKSPACE' && activeDoc.status === 'idle' && (
                                             <div className="text-right">
