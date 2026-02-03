@@ -463,6 +463,55 @@
             }
         };
 
+        const CHUNK_WORKER_SCRIPT = `
+            self.onmessage = function(e) {
+                const { text, chunkSize } = e.data;
+                const chunks = [];
+                let startIndex = 0;
+
+                while (startIndex < text.length) {
+                    let endIndex = Math.min(startIndex + chunkSize, text.length);
+
+                    if (endIndex < text.length) {
+                        const searchWindow = text.substring(startIndex, endIndex);
+                        let breakPoint = -1;
+
+                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
+                            const char = searchWindow[i];
+                            if (char === '.' || char === '?' || char === '!') {
+                                breakPoint = i + 1;
+                                break;
+                            }
+                        }
+
+                        if (breakPoint === -1) {
+                            for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
+                                if (searchWindow[i] === ' ') {
+                                    breakPoint = i + 1;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (breakPoint === -1 || breakPoint === 0) {
+                            breakPoint = searchWindow.length;
+                        }
+
+                        endIndex = startIndex + breakPoint;
+                    }
+
+                    const chunk = text.substring(startIndex, endIndex).trim();
+                    if (chunk.length > 0) {
+                        chunks.push(chunk);
+                    }
+
+                    startIndex = endIndex;
+                }
+
+                self.postMessage(chunks);
+            };
+        `;
+
         /**
          * Recursively processes large text inputs by splitting them into semantically meaningful chunks
          * (respecting sentence boundaries) and summarizing them in parallel using the Gemini API.
@@ -476,59 +525,31 @@
             // If text is under threshold, no chunking needed
             if (text.length <= 15000) return text;
 
-            // PHASE 3: Semantic chunking - split at sentence boundaries
-            const chunks = [];
-            let startIndex = 0;
+            // PHASE 3: Worker-based Semantic Chunking
+            let chunks = [];
+            let workerUrl = null;
+            let worker = null;
 
-            while (startIndex < text.length) {
-                // Calculate the ideal end position
-                let endIndex = Math.min(startIndex + chunkSize, text.length);
+            try {
+                const blob = new Blob([CHUNK_WORKER_SCRIPT], { type: 'application/javascript' });
+                workerUrl = URL.createObjectURL(blob);
+                worker = new Worker(workerUrl);
 
-                // If we're not at the end of the text, find a good break point
-                if (endIndex < text.length) {
-                    // Look for the last sentence-ending punctuation within the chunk
-                    const searchWindow = text.substring(startIndex, endIndex);
-
-                    // Find last period, question mark, or exclamation mark
-                    let breakPoint = -1;
-                    for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 500); i--) {
-                        const char = searchWindow[i];
-                        if (char === '.' || char === '?' || char === '!') {
-                            breakPoint = i + 1; // Include the punctuation
-                            break;
-                        }
-                    }
-
-                    // If no punctuation found, look for last space
-                    if (breakPoint === -1) {
-                        for (let i = searchWindow.length - 1; i >= Math.max(0, searchWindow.length - 200); i--) {
-                            if (searchWindow[i] === ' ') {
-                                breakPoint = i + 1;
-                                break;
-                            }
-                        }
-                    }
-
-                    // HARD FALLBACK: If still no break point found, force cut at chunkSize
-                    // This PREVENTS infinite loops
-                    if (breakPoint === -1 || breakPoint === 0) {
-                        breakPoint = searchWindow.length;
-                    }
-
-                    endIndex = startIndex + breakPoint;
-                }
-
-                // Extract the chunk and add it
-                const chunk = text.substring(startIndex, endIndex).trim();
-                if (chunk.length > 0) {
-                    chunks.push(chunk);
-                }
-
-                // CRITICAL: Always advance startIndex to prevent infinite loop
-                startIndex = endIndex;
+                chunks = await new Promise((resolve, reject) => {
+                    worker.onmessage = (e) => resolve(e.data);
+                    worker.onerror = (e) => reject(e);
+                    worker.postMessage({ text, chunkSize });
+                });
+            } catch (e) {
+                console.error("Worker Chunking Failed", e);
+                // Fallback to returning raw text if worker fails to prevent crash
+                return text;
+            } finally {
+                if (worker) worker.terminate();
+                if (workerUrl) URL.revokeObjectURL(workerUrl);
             }
 
-            log(`[Infinite PDF] Semantic chunking: ${text.length} chars into ${chunks.length} chunks`);
+            log(`[Infinite PDF] Semantic chunking (Worker): ${text.length} chars into ${chunks.length} chunks`);
 
             // OPTIMIZATION: Parallel processing with Promise.all
             const summaryPromises = chunks.map(chunk => {
